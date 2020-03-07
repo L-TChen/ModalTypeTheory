@@ -2,8 +2,6 @@
 
 module KSCMTT where
 
-open import Preamble
-
 infixr 10 ``_``
 infixr 10 [_]_
 --infixr 10 □_
