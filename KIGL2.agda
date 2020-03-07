@@ -1,13 +1,6 @@
 -- Kripke-style intuitionistic GL 
 
--- To-do:
---   * Prove confluence (by parallel reduction)
---   * Strongly normalising
---   * Consistency
--- Try to remove the elimination in mfix
--- β-mfix : mfix′ M -→ M [ dia (mfix′ M) ]
-
-module KIGL where
+module KIGL2 where
 
 open import Data.Nat
 
@@ -88,25 +81,14 @@ data _⊢_ where
         ---------
       → Ψ , Γ ⊢ B
 
-  mfix
-    : Ψ , Γ , (∅ , □ A) ⊢ A
+  mfix′
+    : Ψ , (∅ , □ A) ⊢ A
       ---------------------
-    → Ψ , Γ ⊢ □ A
+    → Ψ , Δ ⊢ A
 
 #_ : (n : ℕ) → Ξ , Γ ⊢ lookup Γ n
 # n  =  ` count n
 
-pattern mfix′ M = ⌊ mfix M ⌋
-{- mfix′
-    : Ψ , Γ , (∅ , □ A) ⊢ A
-      ---------------------
-    → Ψ , Γ , Δ ⊢ A
-    
-  Note that the context in the conclusion is not as the same as other
-  rules. If we take this form instead of mfix in our definition, it
-  becomes harder to do induction over derivations. It is not a problem when mfix′
-  is a derived construct, though.
--}
 ------------------------------------------------------------------------------
 -- Examples 
 
@@ -119,7 +101,7 @@ K = λ̇ λ̇ ⌈ ⌊ # 1 ⌋ · ⌊ # 0 ⌋ ⌉
 
 -- GL is derivable
 GL : Ψ , Γ ⊢ □ (□ A →̇ A) →̇ □ A
-GL = λ̇ mfix (⌊ # 0 ⌋ · # 0)
+GL = λ̇ ⌈ mfix′ (⌊ # 0 ⌋ · # 0) ⌉
 
 -- Gödel numbering, or the 4 rule, is derivable
 gnum : Ψ , Γ ⊢ □ A →̇ □ □ A
@@ -146,18 +128,18 @@ rename ∅         ρ (λ̇ M)     = λ̇ rename ∅ (ext ρ) M
 rename (Ψ , Γ)   ρ (λ̇ M)     = λ̇ rename (Ψ , - Γ -) ρ M
 rename ∅         ρ (M · N)   = rename ∅ ρ M · rename ∅ ρ N
 rename Ψ@(_ , _) ρ (M · N)   = rename Ψ ρ M · rename Ψ ρ N
-rename ∅         ρ ⌈ M ⌉     = ⌈ rename [] ρ M ⌉
-rename Ψ@(_ , _) ρ ⌈ M ⌉     = ⌈ rename - Ψ - ρ M ⌉
 rename ∅         ρ ⟨ M , N ⟩ = ⟨ rename ∅ ρ M , rename ∅ ρ N ⟩
 rename Ψ@(_ , _) ρ ⟨ M , N ⟩ = ⟨ rename Ψ ρ M , rename Ψ ρ N ⟩
 rename ∅         ρ (π₁ M)    = π₁ rename ∅ ρ M
 rename Ψ@(_ , _) ρ (π₁ M)    = π₁ rename Ψ ρ M
 rename ∅         ρ (π₂ M)    = π₂ rename ∅ ρ M
 rename Ψ@(_ , _) ρ (π₂ M)    = π₂ rename Ψ ρ M
+rename ∅         ρ ⌈ M ⌉     = ⌈ rename [] ρ M ⌉
+rename Ψ@(_ , _) ρ ⌈ M ⌉     = ⌈ rename - Ψ - ρ M ⌉
 rename ∅         ρ ⌊ M ⌋     = ⌊ M ⌋
 rename (Ψ , _)   ρ ⌊ M ⌋     = ⌊ rename Ψ ρ M ⌋
-rename ∅         ρ (mfix M)  = mfix (rename (∅ , _) ρ M )
-rename Ψ@(_ , _) ρ (mfix M)  = mfix (rename - Ψ - ρ M)
+rename ∅         ρ (mfix′ M) = mfix′ M
+rename Ψ@(_ , _) ρ (mfix′ M) = mfix′ (rename (_ , (∅ , □ _)) ρ M)
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
   → Γ , B ∋ A
@@ -185,8 +167,8 @@ subst ∅          σ ⌈ M ⌉     = ⌈ subst [] σ M ⌉
 subst Ψ@(_ , _)  σ ⌈ M ⌉     = ⌈ subst - Ψ - σ M ⌉
 subst ∅          σ ⌊ M ⌋     = ⌊ M ⌋
 subst (Ψ , _)    σ ⌊ M ⌋     = ⌊ subst Ψ σ M ⌋
-subst ∅          σ (mfix M)  = mfix (subst - ∅ - σ M)
-subst Ψ@(_ , _)  σ (mfix M)  = mfix (subst - Ψ - σ M)
+subst ∅          σ (mfix′ M) = mfix′ M
+subst Ψ@(_ , _)  σ (mfix′ M) = mfix′ (subst (_ , (∅ , □ _)) σ M)
 
 _∣_[_]ₙ : (Ξ : Cxts)
      → Ψ , (Γ , B) ⧺ Ξ ⊢ A
@@ -246,7 +228,7 @@ K′ L M = ⌈ ⌊ L ⌋ · ⌊ M ⌋ ⌉
 -- External GL
 GL′ : Ψ , Γ ⊢ □ (□ A →̇ A)
     → Ψ , Γ ⊢ □ A
-GL′ M = mfix (⌊ M ⌋ · # 0)
+GL′ M = ⌈ mfix′ (⌊ M ⌋ · # 0) ⌉
 
 -- diagonal argument as an intermediate form of gnum′
 dia : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
