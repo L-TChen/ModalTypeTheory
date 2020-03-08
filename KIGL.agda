@@ -4,8 +4,11 @@
 --   * Prove confluence (by parallel reduction)
 --   * Strongly normalising
 --   * Consistency
--- Try to remove the elimination in mfix
--- β-mfix : mfix′ M -→ M [ dia (mfix′ M) ]
+--   * Translate between
+--     * KIGL <-> DIGL (dual-context style of IGL)
+--     * KIGL <-> FIGL (Fitch-style ofIGL)
+-- [x] Try to remove the elimination in irec
+--     β-irec : irec′ M -→ M [ dia (irec′ M) ]
 
 module KIGL where
 
@@ -34,11 +37,14 @@ Cxt  = Context Type
 Cxts = Context Cxt
 data _⊢_ : Cxts → Type → Set
 
+-- 🔒
+-- 🔓
+
 private
   variable
     n m l i j k : ℕ
     Ty  : Set
-    Γ Δ : Context Ty
+    Γ Δ Δ₁ Δ₂ : Context Ty
     Ψ Ξ : Context (Context Ty)
     A B C : Type
     M N L M′ N′ L′ : Ψ ⊢ A
@@ -55,7 +61,7 @@ data Type where
 data _⊢_ where
   `_ : Γ ∋ A
        ---------
-     → Ψ , Γ ⊢ A
+     → Ψ ∣ Γ ⊢ A
 
   λ̇_  : Ψ , (Γ , A) ⊢ B
         ----------------
@@ -88,7 +94,7 @@ data _⊢_ where
         ---------
       → Ψ , Γ ⊢ B
 
-  mfix
+  irec
     : Ψ , Γ , (∅ , □ A) ⊢ A
       ---------------------
     → Ψ , Γ ⊢ □ A
@@ -96,16 +102,11 @@ data _⊢_ where
 #_ : (n : ℕ) → Ξ , Γ ⊢ lookup Γ n
 # n  =  ` count n
 
-pattern mfix′ M = ⌊ mfix M ⌋
-{- mfix′
-    : Ψ , Γ , (∅ , □ A) ⊢ A
-      ---------------------
-    → Ψ , Γ , Δ ⊢ A
-    
-  Note that the context in the conclusion is not as the same as other
-  rules. If we take this form instead of mfix in our definition, it
-  becomes harder to do induction over derivations. It is not a problem when mfix′
-  is a derived construct, though.
+pattern irec′ M = ⌊ irec M ⌋
+{- irec′
+    : Ψ , (∅ , □ A) ⊢ A
+      -----------------
+    → Ψ , Δ ⊢ A
 -}
 ------------------------------------------------------------------------------
 -- Examples 
@@ -119,22 +120,14 @@ K = λ̇ λ̇ ⌈ ⌊ # 1 ⌋ · ⌊ # 0 ⌋ ⌉
 
 -- GL is derivable
 GL : Ψ , Γ ⊢ □ (□ A →̇ A) →̇ □ A
-GL = λ̇ mfix (⌊ # 0 ⌋ · # 0)
+GL = λ̇ irec (⌊ # 0 ⌋ · # 0)
 
 -- Gödel numbering, or the 4 rule, is derivable
 gnum : Ψ , Γ ⊢ □ A →̇ □ □ A
-gnum = λ̇ MN · (LL · # 0)
-  where
-    NN : Ψ , Γ ⊢ □ (□ A ×̇ A) →̇ □ □ A
-    NN = λ̇ K · ⌈ λ̇ π₁ # 0 ⌉ · # 0
+gnum = λ̇ ⌈ π₁ ⌊ irec ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , ⌊ # 0 ⌋ ⟩ ⌋ ⌉ 
 
-    MN : Ψ , Γ ⊢ □ (□ (□ A ×̇ A) →̇ (□ A ×̇ A)) →̇ □ □ A
-    MN = λ̇ NN · (GL · # 0)
-
-    LL : Ψ , Γ ⊢ □ A →̇ □ (□ (□ A ×̇ A) →̇ (□ A ×̇ A))
-    LL = λ̇ ⌈ λ̇ ⟨ K · ⌈ λ̇ π₂ # 0 ⌉ · # 0 , ⌊ # 0 ⌋ ⟩ ⌉
 ------------------------------------------------------------------------------
--- Substitution 
+-- Substitution
 
 rename : (Ψ : Cxts)
   → (∀ {A} → Γ ∋ A → Δ ∋ A)
@@ -156,8 +149,8 @@ rename ∅         ρ (π₂ M)    = π₂ rename ∅ ρ M
 rename Ψ@(_ , _) ρ (π₂ M)    = π₂ rename Ψ ρ M
 rename ∅         ρ ⌊ M ⌋     = ⌊ M ⌋
 rename (Ψ , _)   ρ ⌊ M ⌋     = ⌊ rename Ψ ρ M ⌋
-rename ∅         ρ (mfix M)  = mfix (rename (∅ , _) ρ M )
-rename Ψ@(_ , _) ρ (mfix M)  = mfix (rename - Ψ - ρ M)
+rename ∅         ρ (irec M)  = irec (rename (∅ , _) ρ M )
+rename Ψ@(_ , _) ρ (irec M)  = irec (rename - Ψ - ρ M)
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
   → Γ , B ∋ A
@@ -172,7 +165,7 @@ subst : (Ψ : Cxts) {Γ Δ : Cxt}
 subst ∅          σ (` x)     = σ x
 subst (_ , _)    σ (` x)     = ` x
 subst ∅          σ (λ̇ M)     = λ̇ subst ∅ (exts σ) M
-subst (Ψ , Γ₀)   σ (λ̇ M)     = λ̇ subst (Ψ , - Γ₀ -) σ M
+subst (Ψ , Γ₀)   σ (λ̇ M)     = λ̇ subst (Ψ , (Γ₀ , _)) σ M
 subst ∅          σ (M · N)   = subst ∅ σ M · subst ∅ σ N
 subst Ψ@(_ , _)  σ (M · N)   = subst Ψ σ M · subst Ψ σ N
 subst ∅          σ ⟨ M , N ⟩ = ⟨ subst ∅ σ M , subst ∅ σ N ⟩
@@ -182,11 +175,11 @@ subst Ψ@(_ , _)  σ (π₁ M)    = π₁ subst Ψ σ M
 subst ∅          σ (π₂ M)    = π₂ subst ∅ σ M
 subst Ψ@(_ , _)  σ (π₂ M)    = π₂ subst Ψ σ M
 subst ∅          σ ⌈ M ⌉     = ⌈ subst [] σ M ⌉
-subst Ψ@(_ , _)  σ ⌈ M ⌉     = ⌈ subst - Ψ - σ M ⌉
+subst Ψ@(_ , _)  σ ⌈ M ⌉     = ⌈ subst (Ψ , _) σ M ⌉
 subst ∅          σ ⌊ M ⌋     = ⌊ M ⌋
 subst (Ψ , _)    σ ⌊ M ⌋     = ⌊ subst Ψ σ M ⌋
-subst ∅          σ (mfix M)  = mfix (subst - ∅ - σ M)
-subst Ψ@(_ , _)  σ (mfix M)  = mfix (subst - Ψ - σ M)
+subst ∅          σ (irec M)  = irec (subst - ∅ - σ M)
+subst Ψ@(_ , _)  σ (irec M)  = irec (subst - Ψ - σ M)
 
 _∣_[_]ₙ : (Ξ : Cxts)
      → Ψ , (Γ , B) ⧺ Ξ ⊢ A
@@ -235,33 +228,32 @@ contra {Γ = Γ} {A} = rename ∅ ρ
     ρ (S (S x)) = S x
 
 ------------------------------------------------------------------------------
--- Examples 
-
--- External K
-K′ : Ψ , Γ ⊢ □ (A →̇ B)
-   → Ψ , Γ ⊢ □ A
-   → Ψ , Γ ⊢ □ B
-K′ L M = ⌈ ⌊ L ⌋ · ⌊ M ⌋ ⌉
-
--- External GL
-GL′ : Ψ , Γ ⊢ □ (□ A →̇ A)
-    → Ψ , Γ ⊢ □ A
-GL′ M = mfix (⌊ M ⌋ · # 0)
-
 -- diagonal argument as an intermediate form of gnum′
-dia : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
-        -----------------------------
-      → Ψ , Γ , ∅ ⊢ □ A
-dia M = π₁ mfix′ ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , M ⟩
+diag : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
+           -----------------------------
+         → Ψ , Γ , ∅ ⊢ □ A
+diag M = π₁ ⌊ irec ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , M ⟩ ⌋
 
 -- External gnum using dia
 gnum′ : Ψ , Γ ⊢ □ A
         --------------
       → Ψ , Γ ⊢ □ □ A
-gnum′ M = ⌈ dia ⌊ M ⌋ ⌉
+gnum′ M = ⌈ diag ⌊ M ⌋ ⌉
 
+gnum′′ : Ψ , Γ ⊢ □ A
+         -------------------
+       → (Ψ , Γ) ⧺ Ξ ⊢ □ A
+gnum′′ {Ξ = ∅}     M = M
+gnum′′ {Ξ = _ , _} M = ⌊ gnum′′ (gnum′ M) ⌋
+
+-- GL entails CK4
+⌊_∥_⌋ₙ : ∀ Ξ
+  → Ψ , Γ ⊢ □ A
+    ------------------
+  → Ψ , Γ ⧺ Ξ , Δ ⊢ A
+⌊ Ξ ∥ M ⌋ₙ = ⌊ gnum′′ {Ξ = Ξ} M ⌋
 ------------------------------------------------------------------------------ 
--- Reduction rules
+-- One-step reduction rules
 
 infix 3 _-→_
 data _-→_ : (M N : Ψ ⊢ A) → Set where
@@ -269,6 +261,13 @@ data _-→_ : (M N : Ψ ⊢ A) → Set where
     : (λ̇ M) · N     -→ M [ N ]
   β-□
     : ⌊ ⌈ M ⌉ ⌋ -→ M
+  β-π₁
+    : π₁ ⟨ M , N ⟩ -→ M
+  β-π₂
+    : π₂ ⟨ M , N ⟩ -→ N
+  β-irec
+    : irec  M -→ ⌈ M [ diag ⌊ irec M ⌋ ] ⌉
+-- β-irec₂ : irec′ M -→   M [ diag (irec′ M) ]
   ξ-·₁
     : L -→ L′
       ---------------
@@ -277,5 +276,63 @@ data _-→_ : (M N : Ψ ⊢ A) → Set where
     : M -→ M′
       ---------------
     → L · M -→ L · M′
+  ξ-π₁
+    : M -→ M′
+      -----------------------
+    → π₁ M -→ π₁ M′
+  ξ-π₂
+    : N -→ N′
+      -----------------------
+    → π₂ N -→ π₂ N′
+  ξ-⟨,⟩₁
+    : M -→ M′
+      -----------------------
+    → ⟨ M , N ⟩ -→ ⟨ M′ , N ⟩
+  ξ-⟨,⟩₂
+    : N -→ N′
+      -----------------------
+    → ⟨ M , N ⟩ -→ ⟨ M , N′ ⟩
 
-  β-mfix : mfix′ M -→ M [ dia (mfix′ M) ]
+------------------------------------------------------------------------------
+-- Transitivity and reflexive closure of -→
+
+infix  2 _-↠_
+infix  1 begin_
+infixr 2 _-→⟨_⟩_
+infix  3 _∎
+
+data _-↠_ : (Ψ ⊢ A) → (Ψ ⊢ A) → Set where
+
+  _∎ : M -↠ M
+
+  _-→⟨_⟩_
+    : (L : Ψ ⊢ A) 
+    → L -→ M
+    → M -↠ N
+      ------
+    → L -↠ N
+
+begin_
+  : M -↠ N
+  → M -↠ N
+begin M-↠N = M-↠N
+
+------------------------------------------------------------------------------
+-- Confluency
+
+------------------------------------------------------------------------------
+-- Progress theorem
+
+data Value : Ψ ⊢ A → Set where
+
+data Progress (M : ∅ ⊢ A) : Set where
+
+  step : ∀ {N : ∅ ⊢ A}
+    → M -→ N
+      ----------
+    → Progress M
+
+  done :
+      Value M
+      ----------
+    → Progress M
