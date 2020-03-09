@@ -21,16 +21,14 @@ private
   variable
     Ty  : Set
     Γ Δ : Context Ty
-    
+
 _⧺_ : Context Ty → Context Ty → Context Ty
 Γ ⧺ ∅       = Γ
 Γ ⧺ (Δ , A) = (Γ ⧺ Δ) , A
 
--_- : Context Ty → {Ty} → Context Ty
--_- Γ {A} = Γ , A
 ------------------------------------------------------------------------------
--- Membership 
-    
+-- Membership
+
 data _∋_ {Ty : Set} : Context Ty → Ty → Set where
   Z  : {Γ : Context Ty} {A : Ty}
      → Γ , A ∋ A
@@ -49,7 +47,7 @@ count {Γ = Γ , _} zero     =  Z
 count {Γ = Γ , _} (suc n)  =  S (count n)
 count {Γ = ∅}     _        =  ⊥-elim impossible
   where postulate impossible : ⊥
-     
+
 ext
   : (∀ {A : Ty} →       Γ ∋ A →     Δ ∋ A)
     ---------------------------------

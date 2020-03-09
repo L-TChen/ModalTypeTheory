@@ -1,4 +1,4 @@
--- Kripke-style intuitionistic GL 
+-- Kripke-style intuitionistic GL
 
 -- To-do:
 --   * Prove confluence (by parallel reduction)
@@ -55,18 +55,18 @@ data Type where
   _→̇_  : Type → Type → Type
   □_   : Type → Type
 
-------------------------------------------------------------------------------    
+------------------------------------------------------------------------------
 -- Typing Rules
 
 data _⊢_ where
   `_ : Γ ∋ A
        ---------
-     → Ψ ∣ Γ ⊢ A
+     → Ψ , Γ ⊢ A
 
   λ̇_  : Ψ , (Γ , A) ⊢ B
         ----------------
       → Ψ , Γ ⊢ A →̇ B
-   
+
   _·_ : Ψ , Γ ⊢ A →̇ B
       → Ψ , Γ ⊢ A
         ----------
@@ -109,7 +109,7 @@ pattern irec′ M = ⌊ irec M ⌋
     → Ψ , Δ ⊢ A
 -}
 ------------------------------------------------------------------------------
--- Examples 
+-- Examples
 
 _ : Ψ , Γ ⊢ □ (A →̇ A)
 _ = ⌈ λ̇ # 0 ⌉
@@ -124,7 +124,7 @@ GL = λ̇ irec (⌊ # 0 ⌋ · # 0)
 
 -- Gödel numbering, or the 4 rule, is derivable
 gnum : Ψ , Γ ⊢ □ A →̇ □ □ A
-gnum = λ̇ ⌈ π₁ ⌊ irec ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , ⌊ # 0 ⌋ ⟩ ⌋ ⌉ 
+gnum = λ̇ ⌈ π₁ ⌊ irec ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , ⌊ # 0 ⌋ ⟩ ⌋ ⌉
 
 ------------------------------------------------------------------------------
 -- Substitution
@@ -136,11 +136,11 @@ rename : (Ψ : Cxts)
 rename ∅         ρ (` x)     = ` ρ x
 rename (Ψ , Γ)   ρ (` x)     = ` x
 rename ∅         ρ (λ̇ M)     = λ̇ rename ∅ (ext ρ) M
-rename (Ψ , Γ)   ρ (λ̇ M)     = λ̇ rename (Ψ , - Γ -) ρ M
+rename (Ψ , Γ)   ρ (λ̇ M)     = λ̇ rename (Ψ , (Γ , _)) ρ M
 rename ∅         ρ (M · N)   = rename ∅ ρ M · rename ∅ ρ N
 rename Ψ@(_ , _) ρ (M · N)   = rename Ψ ρ M · rename Ψ ρ N
 rename ∅         ρ ⌈ M ⌉     = ⌈ rename [] ρ M ⌉
-rename Ψ@(_ , _) ρ ⌈ M ⌉     = ⌈ rename - Ψ - ρ M ⌉
+rename Ψ@(_ , _) ρ ⌈ M ⌉     = ⌈ rename (Ψ , _) ρ M ⌉
 rename ∅         ρ ⟨ M , N ⟩ = ⟨ rename ∅ ρ M , rename ∅ ρ N ⟩
 rename Ψ@(_ , _) ρ ⟨ M , N ⟩ = ⟨ rename Ψ ρ M , rename Ψ ρ N ⟩
 rename ∅         ρ (π₁ M)    = π₁ rename ∅ ρ M
@@ -150,7 +150,7 @@ rename Ψ@(_ , _) ρ (π₂ M)    = π₂ rename Ψ ρ M
 rename ∅         ρ ⌊ M ⌋     = ⌊ M ⌋
 rename (Ψ , _)   ρ ⌊ M ⌋     = ⌊ rename Ψ ρ M ⌋
 rename ∅         ρ (irec M)  = irec (rename (∅ , _) ρ M )
-rename Ψ@(_ , _) ρ (irec M)  = irec (rename - Ψ - ρ M)
+rename Ψ@(_ , _) ρ (irec M)  = irec (rename (Ψ , _) ρ M)
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
   → Γ , B ∋ A
@@ -178,8 +178,8 @@ subst ∅          σ ⌈ M ⌉     = ⌈ subst [] σ M ⌉
 subst Ψ@(_ , _)  σ ⌈ M ⌉     = ⌈ subst (Ψ , _) σ M ⌉
 subst ∅          σ ⌊ M ⌋     = ⌊ M ⌋
 subst (Ψ , _)    σ ⌊ M ⌋     = ⌊ subst Ψ σ M ⌋
-subst ∅          σ (irec M)  = irec (subst - ∅ - σ M)
-subst Ψ@(_ , _)  σ (irec M)  = irec (subst - Ψ - σ M)
+subst ∅          σ (irec M)  = irec (subst (∅ , _) σ M)
+subst Ψ@(_ , _)  σ (irec M)  = irec (subst (Ψ , _) σ M)
 
 _∣_[_]ₙ : (Ξ : Cxts)
      → Ψ , (Γ , B) ⧺ Ξ ⊢ A
@@ -252,7 +252,7 @@ gnum′′ {Ξ = _ , _} M = ⌊ gnum′′ (gnum′ M) ⌋
     ------------------
   → Ψ , Γ ⧺ Ξ , Δ ⊢ A
 ⌊ Ξ ∥ M ⌋ₙ = ⌊ gnum′′ {Ξ = Ξ} M ⌋
------------------------------------------------------------------------------- 
+------------------------------------------------------------------------------
 -- One-step reduction rules
 
 infix 3 _-→_
@@ -306,7 +306,7 @@ data _-↠_ : (Ψ ⊢ A) → (Ψ ⊢ A) → Set where
   _∎ : M -↠ M
 
   _-→⟨_⟩_
-    : (L : Ψ ⊢ A) 
+    : (L : Ψ ⊢ A)
     → L -→ M
     → M -↠ N
       ------

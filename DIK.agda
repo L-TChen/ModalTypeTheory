@@ -42,10 +42,10 @@ private
   variable
     A B C : Ty
     Γ Δ Γ₁ Γ₂ Δ₁ Δ₂ : Cxt
-    
+
 ------------------------------------------------------------------------------
--- Membership 
-    
+-- Membership
+
 data _∋_ : Cxt → Ty → Set where
   Z  : ∀ {A} → Γ , A ∋ A
   S_ : Γ ∋ A → Γ , B ∋ A
@@ -61,7 +61,7 @@ count {Γ = Γ , _} zero     =  Z
 count {Γ = Γ , _} (suc n)  =  S (count n)
 count {Γ = ∅}     _        =  ⊥-elim impossible
   where postulate impossible : ⊥
-     
+
 ext
   : (∀ {A} →       Γ ∋ A →     Δ ∋ A)
     ---------------------------------
@@ -70,7 +70,7 @@ ext ρ Z      =  Z
 ext ρ (S x)  =  S (ρ x)
 
 ------------------------------------------------------------------------------
--- Typing rules for DCK 
+-- Typing rules for DCK
 
 data _/_⊢_ (Δ Γ : Cxt) : Ty → Set where
   `_ : Γ ∋ A
@@ -107,7 +107,7 @@ data _/_⊢_ (Δ Γ : Cxt) : Ty → Set where
     → (N : Δ , A / Γ ⊢ C)
       ------------------- (let construct, i.e. explicit substitution)
     → Δ / Γ ⊢ C
-  
+
 #_ : (n : ℕ) → Δ / Γ ⊢ lookup Γ n
 # n  =  ` count n
 
@@ -179,7 +179,7 @@ rename□ ρ (λ̇ M)     = λ̇ rename□ ρ M
 rename□ ρ (M · N)   = rename□ ρ M · rename□ ρ N
 rename□ ρ (box M)   = box rename ρ M
 rename□ ρ (letbox M within N) =
-  letbox rename□ ρ M within rename□ (ext ρ) N 
+  letbox rename□ ρ M within rename□ (ext ρ) N
 
 weaken□
   : Δ₁ ⧺ Δ₂ / Γ ⊢ A
@@ -192,7 +192,7 @@ weaken□ (λ̇ M)     = λ̇ weaken□ M
 weaken□ (L · M)   = weaken□ L · weaken□ M
 weaken□ (box M)   = box weaken M
 weaken□ {Δ₁} {Δ₂} {Γ} {A} (letbox M within N) =
-  letbox weaken□ M within weaken□ {Δ₁} {Δ₂ , _} N 
+  letbox weaken□ M within weaken□ {Δ₁} {Δ₂ , _} N
 {-
 weaken□ (` x)     = ` x
 weaken□ ⟨ M , N ⟩ = ⟨ weaken□ M , weaken□ N ⟩
@@ -202,7 +202,7 @@ weaken□ (λ̇ M)     = λ̇ weaken□ M
 weaken□ (M · N)   = weaken□ M · weaken□ N
 weaken□ (box M)   = box weaken M
 weaken□ {Δ₁} {Δ₂} {Γ} {A} {B} (letbox_within_ {C} M N)
-  = letbox weaken□ M within weaken□ {Δ₁} {Δ₂ , C} N 
+  = letbox weaken□ M within weaken□ {Δ₁} {Δ₂ , C} N
 -}
 exts□
   : (∀ {A} → Δ₁ ∋ A → Δ₂ / Γ ⊢ A)
@@ -235,7 +235,7 @@ _[_]
   → Δ / Γ ⊢ B
     ---------
   → Δ / Γ ⊢ A
-_[_] {Δ} {Γ} {B} {A} N M = subst σ N 
+_[_] {Δ} {Γ} {B} {A} N M = subst σ N
   where
   σ : ∀ {A} → Γ , B ∋ A → Δ / Γ ⊢ A
   σ Z      = M

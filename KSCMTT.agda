@@ -38,7 +38,7 @@ data Cxts where
 
 _⧺_ : Cxts → Cxts → Cxts
 Γ ⧺ ∅       = Γ
-Γ ⧺ (_,_ Δ x) = (Γ ⧺ Δ) , x 
+Γ ⧺ (_,_ Δ x) = (Γ ⧺ Δ) , x
 
 private
   variable
@@ -48,16 +48,16 @@ private
     A B C D : Type
     M N : Ψ ⊢ A
 
-------------------------------------------------------------------------------    
+------------------------------------------------------------------------------
 -- Typing Rules
 
 data _⊢_ where
   var : A ∈ Γ
       → Ψ , Γ ⊢ A
-  
+
   ƛ_  : Ψ , (A ∷ Γ) ⊢ B
       → Ψ , Γ ⊢ A ⇒ B
-      
+
   _·_ : Ψ , Γ ⊢ A ⇒ B
       → Ψ , Γ ⊢ A
       → Ψ , Γ ⊢ B
@@ -70,14 +70,14 @@ data _⊢_ where
        → Ψ , Γ ⊢ A
 
 ⟨⊢_⟩ : Ψ ⊢ □ A
-  → Ψ , Γ ⊢ A 
+  → Ψ , Γ ⊢ A
 ⟨⊢ M ⟩ = ⟨ [] ⊢ M ⟩
 
 #_ : (n : Fin (length Γ)) → Ψ , Γ ⊢ lookup Γ n
 # n  = var (count n)
 
 ------------------------------------------------------------------------------
--- Examples 
+-- Examples
 
 -- Internal Weakening
 M₁ : ∅ , [] ⊢ [ C ∷ [] ] A ⇒ [ C ∷ D ∷ [] ] A
@@ -148,7 +148,7 @@ subst ∅         σ (M · N)    = subst ∅ σ M · subst ∅ σ N
 subst Ψ@(_ , _) σ (M · N)    = subst Ψ σ M · subst Ψ σ N
 subst ∅         σ `` M ``    = `` subst (∅ , _) σ M ``
 subst Ψ@(_ , _) σ `` M ``    = `` subst (Ψ , _) σ M ``
-subst ∅         σ ⟨ Ns ⊢ M ⟩ = ⟨ substs ∅       σ Ns ⊢ M ⟩ 
+subst ∅         σ ⟨ Ns ⊢ M ⟩ = ⟨ substs ∅       σ Ns ⊢ M ⟩
 subst (Ψ , _)   σ ⟨ Ns ⊢ M ⟩ = ⟨ substs (Ψ , _) σ Ns ⊢ subst Ψ σ M ⟩
 substs Ψ        σ []         = []
 substs Ψ        σ (N ∷ Ns)   = subst Ψ σ N ∷ substs Ψ σ Ns
@@ -167,7 +167,7 @@ _[_] : Ψ , (B ∷ Γ) ⊢ A
      → Ψ , Γ ⊢ A
 N [ M ] = _[_]ₙ {Ξ = ∅} N M
 
------------------------------------------------------------------------------- 
+------------------------------------------------------------------------------
 -- Bidirectional Type Inference
 
 open import Data.String
@@ -187,10 +187,10 @@ rng (Γ , x ⦂ A) = A ∷ rng Γ
 data IdCxts : Set where
   ∅    : IdCxts
   _,_  : (Ψ : IdCxts) → (Γ : IdCxt) → IdCxts
-  
+
 data Term⁺ : Set
 data Term⁻ : Set
-Terms⁻ : Set 
+Terms⁻ : Set
 
 data Term⁺ where
   var   : Id → Term⁺
@@ -213,7 +213,7 @@ data _⦂_∈_ : Id → Type → IdCxt → Set where
         → x ⦂ A ∈ Γ
         → x ⦂ A ∈ Γ , y ⦂ B
 
-data _⊢_⇑_ : IdCxts → Term⁺ → Type → Set 
+data _⊢_⇑_ : IdCxts → Term⁺ → Type → Set
 data _⊢_⇓_ : IdCxts → Term⁻ → Type → Set
 
 data _⊢_⇑_ where

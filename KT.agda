@@ -1,4 +1,4 @@
--- T with □ in Kripke style / Fitch style 
+-- T with □ in Kripke style / Fitch style
 
 module KT where
 
@@ -39,7 +39,7 @@ data Type where
   _→̇_  : Type → Type → Type
   □_   : Type → Type
 
-------------------------------------------------------------------------------    
+------------------------------------------------------------------------------
 -- Typing Rules
 
 data _⊢_ where
@@ -50,7 +50,7 @@ data _⊢_ where
   λ̇_  : Ψ , (Γ , A) ⊢ B
         ----------------
       → Ψ , Γ ⊢ A →̇ B
-   
+
   _·_ : Ψ , Γ ⊢ A →̇ B
       → Ψ , Γ ⊢ A
         ----------
@@ -102,13 +102,13 @@ data _⊢_ where
 # n  =  ` count n
 
 ------------------------------------------------------------------------------
--- Examples 
+-- Examples
 
 K : Ψ , Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
 K = λ̇ λ̇ box (unbox (# 1) · unbox (# 0))
 
 ------------------------------------------------------------------------------
--- Substitution 
+-- Substitution
 
 rename : (Ψ : Cxts)
   → (∀ {A} → Γ ∋ A → Δ ∋ A)
@@ -117,7 +117,7 @@ rename : (Ψ : Cxts)
 rename ∅         ρ (` x)     = ` ρ x
 rename (Ψ , Γ)   ρ (` x)     = ` x
 rename ∅         ρ (λ̇ M)     = λ̇ rename ∅ (ext ρ) M
-rename (Ψ , Γ)   ρ (λ̇ M)     = λ̇ rename (Ψ , - Γ -) ρ M
+rename (Ψ , Γ)   ρ (λ̇ M)     = λ̇ rename (Ψ , (Γ , _)) ρ M
 rename ∅         ρ (M · N)   = rename ∅ ρ M · rename ∅ ρ N
 rename Ψ@(_ , _) ρ (M · N)   = rename Ψ ρ M · rename Ψ ρ N
 rename ∅         ρ ⟨ M , N ⟩ = ⟨ rename ∅ ρ M , rename ∅ ρ N ⟩
@@ -135,9 +135,9 @@ rename Ψ@(_ , _) ρ (succ M)  = succ (rename Ψ ρ M)
 rename ∅         ρ (case L M N) =
   case (rename ∅ ρ L) (rename ∅ ρ M) (rename ∅ (ext ρ) N)
 rename Ψ@(Ξ , Γ)   ρ (case L M N) =
-  case (rename Ψ ρ L) (rename Ψ ρ M) (rename (Ξ , - Γ -) ρ N)
+  case (rename Ψ ρ L) (rename Ψ ρ M) (rename (Ξ , (Γ , _)) ρ N)
 rename ∅         ρ (box M)   = box (rename [] ρ M)
-rename Ψ@(_ , _) ρ (box M)   = box (rename - Ψ - ρ M)
+rename Ψ@(_ , _) ρ (box M)   = box (rename (Ψ , _) ρ M)
 rename ∅         ρ (unbox M) = unbox M
 rename (Ψ , _)   ρ (unbox M) = unbox (rename Ψ ρ M)
 
@@ -154,17 +154,17 @@ subst : (Ψ : Cxts) {Γ Δ : Cxt}
 subst ∅          σ (` x)     = σ x
 subst (_ , _)    σ (` x)     = ` x
 subst ∅          σ (λ̇ M)     = λ̇ subst ∅ (exts σ) M
-subst (Ψ , Γ₀)   σ (λ̇ M)     = λ̇ subst (Ψ , - Γ₀ -) σ M
+subst (Ψ , Γ₀)   σ (λ̇ M)     = λ̇ subst (Ψ , (Γ₀ , _)) σ M
 subst ∅          σ (M · N)   = subst ∅ σ M · subst ∅ σ N
 subst Ψ@(_ , _)  σ (M · N)   = subst Ψ σ M · subst Ψ σ N
 subst ∅          σ ⟨ x , y ⟩ = ⟨ subst ∅ σ x , subst ∅ σ y ⟩
 subst Ψ@(_ , T)  σ ⟨ x , y ⟩ = ⟨ subst Ψ σ x , subst Ψ σ y ⟩
 subst ∅          σ (π₁ x)    = π₁ subst ∅ σ x
-subst Ψ@(_ , T)  σ (π₁ x)    = π₁ subst Ψ σ x 
-subst ∅          σ (π₂ y)    = π₂ subst ∅ σ y 
-subst Ψ@(_ , T)  σ (π₂ y)    = π₂ subst Ψ σ y  
-subst ∅          σ (abort x) = abort subst ∅ σ x 
-subst Ψ@(_ , T)  σ (abort x) = abort subst Ψ σ x 
+subst Ψ@(_ , T)  σ (π₁ x)    = π₁ subst Ψ σ x
+subst ∅          σ (π₂ y)    = π₂ subst ∅ σ y
+subst Ψ@(_ , T)  σ (π₂ y)    = π₂ subst Ψ σ y
+subst ∅          σ (abort x) = abort subst ∅ σ x
+subst Ψ@(_ , T)  σ (abort x) = abort subst Ψ σ x
 subst ∅          σ zero      = zero
 subst Ψ@(_ , _)  σ zero      = zero
 subst ∅          σ (succ M)  = succ (subst ∅ σ M)
@@ -172,9 +172,9 @@ subst Ψ@(_ , _)  σ (succ M)  = succ (subst Ψ σ M)
 subst ∅          σ (case L M N) =
   case (subst ∅ σ L) (subst ∅ σ M) (subst ∅ (exts σ) N)
 subst Ψ@(Ξ , Γ)  σ (case L M N) =
-  case (subst Ψ σ L) (subst Ψ σ M) (subst (Ξ , - Γ -) σ N)
+  case (subst Ψ σ L) (subst Ψ σ M) (subst (Ξ , (Γ , _)) σ N)
 subst ∅          σ (box M)   = box (subst [] σ M)
-subst Ψ@(_ , _)  σ (box M)   = box (subst - Ψ - σ M)
+subst Ψ@(_ , _)  σ (box M)   = box (subst (Ψ , _) σ M)
 subst ∅          σ (unbox M) = unbox M
 subst (Ψ , _)    σ (unbox M) = unbox (subst Ψ σ M)
 
@@ -192,7 +192,7 @@ _[_] : Ψ , (Γ , B) ⊢ A
      → Ψ , Γ ⊢ A
 N [ M ] = _[_]ₙ {Ξ = ∅} N M
 
------------------------------------------------------------------------------- 
+------------------------------------------------------------------------------
 -- Reduction rules
 
 infix 3 _-→_
@@ -205,7 +205,6 @@ data _-→_ : (M N : Ψ ⊢ A) → Set where
     : case zero M N -→ M
   β-case₁
     : case (succ L) M N -→ N [ L ]
-
   ξ-·₁
     : L -→ L′
       ---------------
@@ -222,3 +221,8 @@ data _-→_ : (M N : Ψ ⊢ A) → Set where
     : L -→ L′
       -------------------------
     → case L M N -→ case L′ M N
+  ξ-unbox
+    : ∀ Γ
+    → M -→ M′
+      ----------------------------
+    → unbox_ {Γ = Γ} M -→ unbox M′
