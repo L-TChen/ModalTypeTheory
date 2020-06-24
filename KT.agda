@@ -3,13 +3,11 @@
 module KT where
 
 open import Data.Nat
+
 open import Context
+open import Type
 
 infix  3 _⊢_
-
-infixr 7 _→̇_
-infixr 8 _×̇_
-infix  9 □_
 
 infixr 5 λ̇_
 infixl 7 _·_
@@ -18,7 +16,6 @@ infixr 8 unbox_
 infix  9 `_
 infix  9 #_
 
-data Type : Set
 Cxt  = Context Type
 Cxts = Context Cxt
 data _⊢_ : Cxts → Type → Set
@@ -31,13 +28,6 @@ private
     Ψ Ξ : Context (Context Ty)
     A B : Type
     M N L M′ N′ L′ : Ψ ⊢ A
-
-data Type where
-  ⊥̇    : Type
-  ℕ̇    : Type
-  _×̇_  : Type → Type → Type
-  _→̇_  : Type → Type → Type
-  □_   : Type → Type
 
 ------------------------------------------------------------------------------
 -- Typing Rules

@@ -10,7 +10,7 @@
 -- [x] Try to remove the elimination in irec
 --     β-irec : irec′ M -→ M [ dia (irec′ M) ]
 
-module KIGL where
+module Kripke.IGL where
 
 open import Data.Nat
 
@@ -22,23 +22,20 @@ infixr 7 _→̇_
 infixr 8 _×̇_
 infix  9 □_
 
-infix  4 ⟨_,_⟩
 infixr 5 λ̇_
+infix  6 ⟨_,_⟩
 infixl 7 _·_
---infix  8 ⌈_⌉
---infixr 8 ⌊_⌋
+infix  8 ⌈_⌉
+infixr 8 ⌊_⌋
 infix  9 `_
-infixr 9 π₁_
-infixr 9 π₂_
+infixr 9 proj₁_
+infixr 9 proj₂_
 infix  10 #_
 
 data Type : Set
 Cxt  = Context Type
 Cxts = Context Cxt
 data _⊢_ : Cxts → Type → Set
-
--- 🔒
--- 🔓
 
 private
   variable
@@ -78,13 +75,19 @@ data _⊢_ where
       --------------
     → Ψ , Γ ⊢ A ×̇ B
 
-  π₁_ : Ψ , Γ ⊢ A ×̇ B
+  proj₁_ : Ψ , Γ ⊢ A ×̇ B
        -------------
      → Ψ , Γ ⊢ A
 
-  π₂_ : Ψ , Γ ⊢ A ×̇ B
+  proj₂_ : Ψ , Γ ⊢ A ×̇ B
        -------------
      → Ψ , Γ ⊢ B
+
+  abort
+    : Ψ , Γ ⊢ ⊥̇
+      ---------
+    → Ψ , Γ ⊢ A
+  
 
   ⌈_⌉ : Ψ , Γ , ∅ ⊢ A
        --------------
@@ -102,6 +105,7 @@ data _⊢_ where
 #_ : (n : ℕ) → Ξ , Γ ⊢ lookup Γ n
 # n  =  ` count n
 
+¬̇_ = λ A → A →̇ ⊥̇ 
 pattern irec′ M = ⌊ irec M ⌋
 {- irec′
     : Ψ , (∅ , □ A) ⊢ A
@@ -122,9 +126,12 @@ K = λ̇ λ̇ ⌈ ⌊ # 1 ⌋ · ⌊ # 0 ⌋ ⌉
 GL : Ψ , Γ ⊢ □ (□ A →̇ A) →̇ □ A
 GL = λ̇ irec (⌊ # 0 ⌋ · # 0)
 
+GL′ : ∅ , ∅ ⊢ □ (□ ⊥̇ →̇ ⊥̇) →̇ □ ⊥̇
+GL′ = GL
+
 -- Gödel numbering, or the 4 rule, is derivable
 gnum : Ψ , Γ ⊢ □ A →̇ □ □ A
-gnum = λ̇ ⌈ π₁ ⌊ irec ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , ⌊ # 0 ⌋ ⟩ ⌋ ⌉
+gnum = λ̇ ⌈ proj₁ ⌊ irec ⟨ ⌈ proj₂ ⌊ # 0 ⌋ ⌉ , ⌊ # 0 ⌋ ⟩ ⌋ ⌉
 
 ------------------------------------------------------------------------------
 -- Substitution
@@ -143,10 +150,12 @@ rename ∅         ρ ⌈ M ⌉     = ⌈ rename [] ρ M ⌉
 rename Ψ@(_ , _) ρ ⌈ M ⌉     = ⌈ rename (Ψ , _) ρ M ⌉
 rename ∅         ρ ⟨ M , N ⟩ = ⟨ rename ∅ ρ M , rename ∅ ρ N ⟩
 rename Ψ@(_ , _) ρ ⟨ M , N ⟩ = ⟨ rename Ψ ρ M , rename Ψ ρ N ⟩
-rename ∅         ρ (π₁ M)    = π₁ rename ∅ ρ M
-rename Ψ@(_ , _) ρ (π₁ M)    = π₁ rename Ψ ρ M
-rename ∅         ρ (π₂ M)    = π₂ rename ∅ ρ M
-rename Ψ@(_ , _) ρ (π₂ M)    = π₂ rename Ψ ρ M
+rename ∅         ρ (proj₁ M)    = proj₁ rename ∅ ρ M
+rename Ψ@(_ , _) ρ (proj₁ M)    = proj₁ rename Ψ ρ M
+rename ∅         ρ (proj₂ M)    = proj₂ rename ∅ ρ M
+rename Ψ@(_ , _) ρ (proj₂ M)    = proj₂ rename Ψ ρ M
+rename ∅         ρ (abort M) = abort (rename ∅ ρ M)
+rename Ψ@(_ , _) ρ (abort M) = abort (rename Ψ ρ M)
 rename ∅         ρ ⌊ M ⌋     = ⌊ M ⌋
 rename (Ψ , _)   ρ ⌊ M ⌋     = ⌊ rename Ψ ρ M ⌋
 rename ∅         ρ (irec M)  = irec (rename (∅ , _) ρ M )
@@ -170,10 +179,12 @@ subst ∅          σ (M · N)   = subst ∅ σ M · subst ∅ σ N
 subst Ψ@(_ , _)  σ (M · N)   = subst Ψ σ M · subst Ψ σ N
 subst ∅          σ ⟨ M , N ⟩ = ⟨ subst ∅ σ M , subst ∅ σ N ⟩
 subst Ψ@(_ , _)  σ ⟨ M , N ⟩ = ⟨ subst Ψ σ M , subst Ψ σ N ⟩
-subst ∅          σ (π₁ M)    = π₁ subst ∅ σ M
-subst Ψ@(_ , _)  σ (π₁ M)    = π₁ subst Ψ σ M
-subst ∅          σ (π₂ M)    = π₂ subst ∅ σ M
-subst Ψ@(_ , _)  σ (π₂ M)    = π₂ subst Ψ σ M
+subst ∅          σ (proj₁ M)    = proj₁ subst ∅ σ M
+subst Ψ@(_ , _)  σ (proj₁ M)    = proj₁ subst Ψ σ M
+subst ∅          σ (proj₂ M)    = proj₂ subst ∅ σ M
+subst Ψ@(_ , _)  σ (proj₂ M)    = proj₂ subst Ψ σ M
+subst ∅          σ (abort M) = abort (subst ∅ σ M)
+subst Ψ@(_ , _)  σ (abort M) = abort (subst Ψ σ M)
 subst ∅          σ ⌈ M ⌉     = ⌈ subst [] σ M ⌉
 subst Ψ@(_ , _)  σ ⌈ M ⌉     = ⌈ subst (Ψ , _) σ M ⌉
 subst ∅          σ ⌊ M ⌋     = ⌊ M ⌋
@@ -232,7 +243,7 @@ contra {Γ = Γ} {A} = rename ∅ ρ
 diag : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
            -----------------------------
          → Ψ , Γ , ∅ ⊢ □ A
-diag M = π₁ ⌊ irec ⟨ ⌈ π₂ ⌊ # 0 ⌋ ⌉ , M ⟩ ⌋
+diag M = proj₁ ⌊ irec ⟨ ⌈ proj₂ ⌊ # 0 ⌋ ⌉ , M ⟩ ⌋
 
 -- External gnum using dia
 gnum′ : Ψ , Γ ⊢ □ A
@@ -261,13 +272,12 @@ data _-→_ : (M N : Ψ ⊢ A) → Set where
     : (λ̇ M) · N     -→ M [ N ]
   β-□
     : ⌊ ⌈ M ⌉ ⌋ -→ M
-  β-π₁
-    : π₁ ⟨ M , N ⟩ -→ M
-  β-π₂
-    : π₂ ⟨ M , N ⟩ -→ N
+  β-proj₁
+    : proj₁ ⟨ M , N ⟩ -→ M
+  β-proj₂
+    : proj₂ ⟨ M , N ⟩ -→ N
   β-irec
     : irec  M -→ ⌈ M [ diag ⌊ irec M ⌋ ] ⌉
--- β-irec₂ : irec′ M -→   M [ diag (irec′ M) ]
   ξ-·₁
     : L -→ L′
       ---------------
@@ -276,14 +286,14 @@ data _-→_ : (M N : Ψ ⊢ A) → Set where
     : M -→ M′
       ---------------
     → L · M -→ L · M′
-  ξ-π₁
+  ξ-proj₁
     : M -→ M′
       -----------------------
-    → π₁ M -→ π₁ M′
-  ξ-π₂
+    → proj₁ M -→ proj₁ M′
+  ξ-proj₂
     : N -→ N′
       -----------------------
-    → π₂ N -→ π₂ N′
+    → proj₂ N -→ proj₂ N′
   ξ-⟨,⟩₁
     : M -→ M′
       -----------------------
@@ -323,16 +333,16 @@ begin M-↠N = M-↠N
 ------------------------------------------------------------------------------
 -- Progress theorem
 
-data Value : Ψ ⊢ A → Set where
+-- data Value : Ψ ⊢ A → Set where
 
-data Progress (M : ∅ ⊢ A) : Set where
+-- data Progress (M : ∅ ⊢ A) : Set where
 
-  step : ∀ {N : ∅ ⊢ A}
-    → M -→ N
-      ----------
-    → Progress M
+--   step : ∀ {N : ∅ ⊢ A}
+--     → M -→ N
+--       ----------
+--     → Progress M
 
-  done :
-      Value M
-      ----------
-    → Progress M
+--   done :
+--       Value M
+--       ----------
+--     → Progress M
