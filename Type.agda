@@ -2,6 +2,7 @@ module Type where
 
 data Type : Set where
   ⊥̇    : Type
+  ⊤̇    : Type
   ℕ̇    : Type
   _×̇_  : Type → Type → Type
   _→̇_  : Type → Type → Type

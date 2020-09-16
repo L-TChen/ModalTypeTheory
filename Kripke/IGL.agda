@@ -106,7 +106,10 @@ data _⊢_ where
 # n  =  ` count n
 
 ¬̇_ = λ A → A →̇ ⊥̇ 
-pattern irec′ M = ⌊ irec M ⌋
+
+--pattern irec′ M = ⌊ irec M ⌋
+
+
 {- irec′
     : Ψ , (∅ , □ A) ⊢ A
       -----------------
@@ -132,7 +135,6 @@ GL′ = GL
 -- Gödel numbering, or the 4 rule, is derivable
 gnum : Ψ , Γ ⊢ □ A →̇ □ □ A
 gnum = λ̇ ⌈ proj₁ ⌊ irec ⟨ ⌈ proj₂ ⌊ # 0 ⌋ ⌉ , ⌊ # 0 ⌋ ⟩ ⌋ ⌉
-
 ------------------------------------------------------------------------------
 -- Substitution
 
@@ -239,6 +241,15 @@ contra {Γ = Γ} {A} = rename ∅ ρ
     ρ (S (S x)) = S x
 
 ------------------------------------------------------------------------------
+-- Box introduction by GL
+
+⌈_⌉′
+  : Ψ , Γ , ∅ ⊢ A
+  → Ψ , Γ     ⊢ □ A
+⌈ M ⌉′ = irec (weaken M)
+
+
+------------------------------------------------------------------------------
 -- diagonal argument as an intermediate form of gnum′
 diag : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
            -----------------------------
@@ -256,6 +267,23 @@ gnum′′ : Ψ , Γ ⊢ □ A
        → (Ψ , Γ) ⧺ Ξ ⊢ □ A
 gnum′′ {Ξ = ∅}     M = M
 gnum′′ {Ξ = _ , _} M = ⌊ gnum′′ (gnum′ M) ⌋
+
+-- ??
+irec′
+  : Ψ , Γ , (∅ , □ A) ⊢ A
+  → Ψ , Γ , ∅ ⊢ A
+irec′ M = ⌊ irec M ⌋
+
+four
+  : Ψ , (Γ , A) , ∅ ⊢ B
+  → Ψ , (Γ , A) , Δ ⊢ B
+four M = ⌊ ⌈ M ⌉ ⌋
+
+------------------------------------------------------------------------------
+-- Guarded recursion
+
+GR : Ψ , Γ , ∅ ⊢ (□ A →̇ A) →̇ A 
+GR = λ̇ # 0 · irec {!!} -- irec ({!!} · # 0)
 
 -- GL entails CK4
 ⌊_∥_⌋ₙ : ∀ Ξ

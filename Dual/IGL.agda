@@ -20,6 +20,7 @@ infixr 6 proj₁_
 infixr 6 proj₂_
 infixl 7 _·_
 infixl 8 _[_]
+infixl 8 _[_]ᵐ
 infix  9 `_
 infix  9 #_
 
@@ -91,19 +92,18 @@ data _︔_⊢_ where
 ------------------------------------------------------------------------------
 -- Examples
 
-⌈_⌉
-  : ∅ ︔ Δ ⊢ A
-  → Δ ︔ Γ ⊢ □ A
-⌈ M ⌉ = mfix {!wk M!} -- weakening on both contexts
-
 GL : ∅ ︔ ∅ ⊢ □ (□ A →̇ A) →̇ □ A
 GL = λ̇ mlet (# 0) (mfix (# 1 · # 0))
 
 incomplete : ∅ ︔ ∅ ⊢ ¬̇ □ ⊥̇ →̇ ¬̇ □ (¬̇ □ ⊥̇)
 incomplete = {!!}
 
-four : ∅ ︔ ∅ ⊢ □ A →̇ □ □ A
-four = {!!}
+mapp : Δ ︔ Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
+mapp {Δ} {Γ} {A} {B} = {!!}
+
+Lob : Δ ︔ Γ ⊢ □ (□ A →̇ A) →̇ □ A 
+Lob = {!!}
+
 ------------------------------------------------------------------
 -- Substitution
 
@@ -121,23 +121,34 @@ rename ρ (mlet M N) = mlet (rename ρ M) (rename ρ N)
 rename ρ (mfix M)   = mfix M
 
 mrename : (∀ {A} → Δ ∋ A → Δ′ ∋ A)
-  → (Δ  ︔ Δ ⊢ A)
-  → (Δ′ ︔ Δ′ ⊢ A)
-mrename ρ (` x)      = {!!} 
-mrename ρ (λ̇ M)      = {!!} -- λ̇ mrename ρ M
+  → (Δ  ︔ Γ ⊢ A)
+  → (Δ′ ︔ Γ ⊢ A)
+mrename ρ (` x)      = ` x 
+mrename ρ (λ̇ M)      = λ̇ mrename ρ M
 mrename ρ (M · N)    = mrename ρ M · mrename ρ N
 mrename ρ (absurd M) = absurd (mrename ρ M)
 mrename ρ ⟨ M , N ⟩  = ⟨ mrename ρ M , mrename ρ N ⟩
 mrename ρ (proj₁ M)  = proj₁ mrename ρ M
 mrename ρ (proj₂ N)  = proj₂ mrename ρ N
-mrename ρ (mlet L M) = {!!} -- 
-mrename ρ (mfix M )  = {!!} -- mfix {!!}
+mrename ρ (mlet L M) = mlet (mrename ρ L) (mrename (ext ρ) M)
+mrename ρ (mfix M )  = mfix (rename (ext ρ) (mrename ρ M))
 
 exts : ({A : Type} → Γ ∋ A → Δ ︔ Γ′ ⊢ A)
   → Γ , B ∋ A
   → Δ ︔ (Γ′ , B) ⊢ A
 exts σ Z     = ` Z
 exts σ (S p) = rename S_ (σ p)
+
+
+mexts : ({A : Type} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A)
+  → Δ , B ∋ A
+  → Δ′ , B ︔ Δ′ , B , □ A ⊢ A
+mexts σ Z     = ` (S Z)
+mexts σ (S x) =  rename σ′ (mrename S_ (σ x))
+  where
+    σ′ : {A C : Type} → Δ′ , □ A ∋ C → Δ′ , B , □ A ∋ C
+    σ′ Z     = Z
+    σ′ (S x) = S (S x)
 
 subst : ({A : Type} → Γ ∋ A → Δ ︔ Γ′ ⊢ A)
   → Δ ︔ Γ  ⊢ A
@@ -149,7 +160,7 @@ subst σ (absurd M) = absurd (subst σ M)
 subst σ ⟨ M , N ⟩  = ⟨ subst σ M , subst σ N ⟩
 subst σ (proj₁ M)  = proj₁ subst σ M
 subst σ (proj₂ N)  = proj₂ subst σ N
-subst σ (mlet L M) = mlet (subst σ L) (subst {!!} M)
+subst σ (mlet L M) = mlet (subst σ L) (subst (λ x → mrename S_ (σ x)) M)
 subst σ (mfix M )  = mfix M
 
 _[_] : Δ ︔ (Γ , B) ⊢ A
@@ -161,13 +172,43 @@ _[_] {Δ} {Γ} {B} M N = subst σ M
   σ Z      =  N 
   σ (S x)  =  ` x  
 
-
+msubst : ({A : Type} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A)
+  → Δ  ︔ Γ ⊢ A
+  → Δ′ ︔ Γ ⊢ A
+msubst σ (` x)      = ` x
+msubst σ (λ̇ M)      = λ̇ msubst σ M
+msubst σ (M · N)    = msubst σ M · msubst σ N
+msubst σ (absurd M) = absurd (msubst σ M)
+msubst σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
+msubst σ (proj₁ M)  = proj₁ msubst σ M
+msubst σ (proj₂ M)  = proj₂ msubst σ M
+msubst σ (mlet L M) = mlet (msubst σ L) (msubst (mexts σ) M)
+msubst {Δ} {Δ′} {Γ} σ (mfix {A = A} M) =
+  mfix (msubst {!!} {!M!})
+  where 
+    σ₁ : {B : Type} → Δ , □ A ∋ B → Δ′ ︔ Δ′ , □ A ⊢ B  
+    σ₁ Z     = {!!}
+    σ₁ (S x) = {!mfix (σ x)!}
+  
 _m[_]
   : Δ ︔ Δ , □ B ⊢ B
   → Δ , B ︔ Γ ⊢ A
   → Δ ︔ Γ ⊢ A
 _m[_] {Δ} {B} {Γ} M N = {!!}
 
+_[_]ᵐ 
+  : Δ , B ︔ Γ ⊢ A
+  → Δ ︔ Δ , □ B ⊢ B
+  → Δ ︔ Γ ⊢ A
+(` x)      [ N ]ᵐ = ` x
+(λ̇ M)      [ N ]ᵐ = λ̇ M [ N ]ᵐ
+(L · M)    [ N ]ᵐ = L [ N ]ᵐ · M [ N ]ᵐ
+absurd M   [ N ]ᵐ = absurd (M [ N ]ᵐ)
+⟨ L , M ⟩  [ N ]ᵐ = ⟨ L [ N ]ᵐ , M [ N ]ᵐ ⟩
+(proj₁ M)  [ N ]ᵐ = proj₁ M [ N ]ᵐ
+(proj₂ M)  [ N ]ᵐ = proj₂ M [ N ]ᵐ
+mlet L M   [ N ]ᵐ = mlet (L [ N ]ᵐ) {!M!} --
+mfix M     [ N ]ᵐ = mfix {!M [ ? ]ᵐ !}
 -- ------------------------------------------------------------------------------
 -- -- Commutativity and associatitivy of substitution
 
