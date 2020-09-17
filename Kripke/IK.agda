@@ -126,14 +126,14 @@ subst : (Ψ : Cxts) {Γ Δ : Cxt}
   → ({A : Type} → Γ ∋ A → Ξ , Δ ⊢ A)
   → Ξ , Γ ⧺ Ψ ⊢ A
   → Ξ , Δ ⧺ Ψ ⊢ A
-subst ∅          σ (` x)      = σ x
-subst (∅ , _)    σ (` x)      = ` x
-subst (_ , _ , _) σ (` x)     = ` x
-subst ∅          σ (ƛ M)      = ƛ subst ∅ (exts σ) M
-subst (∅ , Γ₀)   σ (ƛ M)      = ƛ subst (∅ , (Γ₀ , _)) σ M
-subst (Ψ@(_ , _) , Γ) σ (ƛ M) = ƛ subst (Ψ , (Γ , _)) σ M
-subst ∅          σ (M · N)   = subst ∅ σ M · subst ∅ σ N
-subst Ψ@(_ , _)  σ (M · N)   = subst Ψ σ M · subst Ψ σ N
+subst ∅             σ (` x)     = σ x
+subst (∅ , _)       σ (` x)     = ` x
+subst (_ , _ , _)   σ (` x)     = ` x
+subst ∅             σ (ƛ M)     = ƛ subst ∅ (exts σ) M
+subst (∅ , Γ₀)      σ (ƛ M)     = ƛ subst (∅ , (Γ₀ , _)) σ M
+subst (Ψ@(_ , _) , Γ) σ (ƛ M)   = ƛ subst (Ψ , (Γ , _)) σ M
+subst ∅             σ (M · N)   = subst ∅ σ M · subst ∅ σ N
+subst Ψ@(_ , _)     σ (M · N)   = subst Ψ σ M · subst Ψ σ N
 subst ∅             σ ⟨⟩        = ⟨⟩
 subst (_ , _)       σ ⟨⟩        = ⟨⟩
 subst ∅             σ ⟨ M , N ⟩ = ⟨ subst ∅ σ M , subst ∅ σ N ⟩
@@ -161,7 +161,6 @@ _[_] : Ψ , (Γ , B) ⊢ A
      → Ψ , Γ ⊢ B
      → Ψ , Γ ⊢ A
 N [ M ] = _[_]ₙ {Ξ = ∅} N M
-
 
 ↑_
   : Ψ , ∅ ⊢ A
@@ -289,3 +288,6 @@ progress (proj₂ M) with progress M
 ... | done V-⟨,⟩   = step β-proj₂-⟨,⟩
 ... | step M→M′    = step (ξ-proj₂ M→M′)
 progress ⌜ M ⌝     = done V-⌜⌝
+
+progress′ : (M : [] ⊢ A) → Progress M
+progress′ = progress
