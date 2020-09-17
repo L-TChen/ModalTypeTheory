@@ -248,8 +248,9 @@ L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -�
 ∅ₙ zero    = ∅
 ∅ₙ (suc n) = ∅ₙ n , ∅
 
-variable
-  n : ℕ
+private
+  variable
+    n : ℕ
 
 data Value {n : ℕ} : ∅ₙ (suc n) ⊢ A → Set where
   V-ƛ
@@ -272,34 +273,19 @@ data Progress {n : ℕ} : ∅ₙ (suc n) ⊢ A → Set where
     → Progress M 
 
 progress : (M : ∅ₙ (suc n) ⊢ A) → Progress M
-progress {n = zero} (ƛ M) = {!!}
-progress {n = suc n} (ƛ M) = {!!}
-progress {n = zero} (M · N) = {!!}
-progress {n = zero} ⟨⟩ = {!!}
-progress {n = zero} ⟨ M , N ⟩ = {!!}
-progress {n = zero} (proj₁ M) = {!!}
-progress {n = zero} (proj₂ M) = {!!}
-progress {n = zero} ⌜ M ⌝ = {!!}
-progress {n = suc n} (M · N) = {!!}
-progress {n = suc n} ⟨⟩ = {!!}
-progress {n = suc n} ⟨ M , N ⟩ = {!!}
-progress {n = suc n} (proj₁ M) = {!!}
-progress {n = suc n} (proj₂ M) = {!!}
-progress {n = suc n} ⌜ M ⌝ = {!!}
 progress {n = suc n} ⌞ M ⌟ with progress M
 ... | done V-⌜⌝ = step β-⌞⌜⌝⌟
 ... | step x = step (ξ-⌞⌟ x)
--- progress (ƛ M)     = done V-ƛ
--- progress (M · N)   with progress M
--- ... | done V-ƛ  = step β-ƛ·
--- ... | step M→M′ = step (ξ-·₁ M→M′)
--- progress ⟨⟩        = done V-⟨⟩
--- progress ⟨ M , N ⟩ = done V-⟨,⟩
--- progress (proj₁ M) with progress M
--- ... | done V-⟨,⟩   = step β-proj₁-⟨,⟩
--- ... | step M→M′    = step (ξ-proj₁ M→M′)
--- progress (proj₂ M) with progress M
--- ... | done V-⟨,⟩   = step β-proj₂-⟨,⟩
--- ... | step M→M′    = step (ξ-proj₂ M→M′)
--- progress ⌜ M ⌝     = done V-⌜⌝
--- progress ⌞ M ⌟     = {!!}
+progress (ƛ M)     = done V-ƛ
+progress (M · N)   with progress M
+... | done V-ƛ  = step β-ƛ·
+... | step M→M′ = step (ξ-·₁ M→M′)
+progress ⟨⟩        = done V-⟨⟩
+progress ⟨ M , N ⟩ = done V-⟨,⟩
+progress (proj₁ M) with progress M
+... | done V-⟨,⟩   = step β-proj₁-⟨,⟩
+... | step M→M′    = step (ξ-proj₁ M→M′)
+progress (proj₂ M) with progress M
+... | done V-⟨,⟩   = step β-proj₂-⟨,⟩
+... | step M→M′    = step (ξ-proj₂ M→M′)
+progress ⌜ M ⌝     = done V-⌜⌝
