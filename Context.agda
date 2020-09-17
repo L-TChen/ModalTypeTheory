@@ -18,6 +18,9 @@ data Context (Ty : Set) : Set where
 -- A shorthand for empty stack
 pattern [] = ∅ , ∅
 
+[_] : {A : Set} → A → Context A
+[ A ] = ∅ , A
+
 private
   variable
     Ty  : Set
