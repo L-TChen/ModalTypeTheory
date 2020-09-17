@@ -5,6 +5,7 @@ module Context where
 
 open import Data.Nat
 open import Data.Empty
+open import Data.Sum
 
 infix  4 _∋_
 infixl 5 _⧺_
@@ -21,6 +22,7 @@ private
   variable
     Ty  : Set
     Γ Δ : Context Ty
+    A B : Ty
 
 _⧺_ : Context Ty → Context Ty → Context Ty
 Γ ⧺ ∅       = Γ
@@ -54,3 +56,21 @@ ext
   → (∀ {A B : Ty} → Γ , B ∋ A → Δ , B ∋ A)
 ext ρ Z      =  Z
 ext ρ (S x)  =  S (ρ x)
+
+------------------------------------------------------------------------------
+-- Properties of ⧺
+
+⧺-∋ : ∀ Δ → Γ ⧺ Δ ∋ A → Γ ∋ A ⊎ Δ ∋ A
+⧺-∋ ∅       x     = inj₁ x
+⧺-∋ (Δ , A) Z     = inj₂ Z
+⧺-∋ (Δ , A) (S x) with ⧺-∋ Δ x
+... | inj₁ Γ∋A = inj₁ Γ∋A
+... | inj₂ Δ∋A = inj₂ (S Δ∋A)
+
+∋-⧺⁺ˡ : Γ ∋ A → Γ ⧺ Δ ∋ A
+∋-⧺⁺ˡ {Δ = ∅}     x = x
+∋-⧺⁺ˡ {Δ = Δ , B} x = S (∋-⧺⁺ˡ x)
+
+∋-⧺⁺ʳ : ∀ Γ → Δ ∋ A → Γ ⧺ Δ ∋ A
+∋-⧺⁺ʳ Γ Z     = Z
+∋-⧺⁺ʳ Γ (S x) = S ∋-⧺⁺ʳ Γ x
