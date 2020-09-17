@@ -5,7 +5,8 @@ module Context where
 
 open import Data.Nat
 open import Data.Empty
-open import Data.Sum
+open import Data.Sum hiding (map)
+open import Relation.Binary.PropositionalEquality as P using (_≡_)
 
 infix  4 _∋_
 infixl 5 _⧺_
@@ -30,6 +31,10 @@ private
 _⧺_ : Context Ty → Context Ty → Context Ty
 Γ ⧺ ∅       = Γ
 Γ ⧺ (Δ , A) = (Γ ⧺ Δ) , A
+
+map : ∀ {X Y} → (X → Y) → Context X → Context Y
+map f ∅ = ∅
+map f (Γ , A) = map f Γ , f A
 
 ------------------------------------------------------------------------------
 -- Membership
@@ -63,6 +68,10 @@ ext ρ (S x)  =  S (ρ x)
 ------------------------------------------------------------------------------
 -- Properties of ⧺
 
+⧺-identityˡ : (Γ : Context Ty) → ∅ ⧺ Γ ≡ Γ
+⧺-identityˡ ∅ = P.refl
+⧺-identityˡ (Γ , A) = P.cong (_, A) (⧺-identityˡ Γ)
+
 ⧺-∋ : ∀ Δ → Γ ⧺ Δ ∋ A → Γ ∋ A ⊎ Δ ∋ A
 ⧺-∋ ∅       x     = inj₁ x
 ⧺-∋ (Δ , A) Z     = inj₂ Z
@@ -77,3 +86,9 @@ ext ρ (S x)  =  S (ρ x)
 ∋-⧺⁺ʳ : ∀ Γ → Δ ∋ A → Γ ⧺ Δ ∋ A
 ∋-⧺⁺ʳ Γ Z     = Z
 ∋-⧺⁺ʳ Γ (S x) = S ∋-⧺⁺ʳ Γ x
+
+-- Properties of map
+
+∋-map⁺ : ∀ {X Y} {Γ : Context X} {A : X} → (f : X → Y) → Γ ∋ A → map f Γ ∋ f A
+∋-map⁺ f Z = Z
+∋-map⁺ f (S x) = S ∋-map⁺ f x
