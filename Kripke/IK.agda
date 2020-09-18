@@ -102,15 +102,15 @@ ids {Ψ = ∅} = ∅
 ids {Ψ = Ψ , Γ} = ids , (λ z → z)
 
 rename : Rename Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
-rename (Ρ , ρ) (` x) = ` ρ x
-rename (Ρ , ρ) (ƛ M) = ƛ rename (Ρ , ext ρ) M
-rename (Ρ , ρ) (M · N) = rename (Ρ , ρ) M · rename (Ρ , ρ) N
-rename (Ρ , ρ) ⟨⟩ = ⟨⟩
-rename (Ρ , ρ) ⟨ M , N ⟩ = ⟨ rename (Ρ , ρ) M , rename (Ρ , ρ) N ⟩
-rename (Ρ , ρ) (proj₁ M) = proj₁ rename (Ρ , ρ) M
-rename (Ρ , ρ) (proj₂ M) = proj₂ rename (Ρ , ρ) M
-rename (Ρ , ρ) ⌜ M ⌝ = ⌜ rename (Ρ , ρ , (λ x → x)) M ⌝
-rename {Ξ = Ξ , _ , _} (Ρ , ρ) ⌞ M ⌟ = ⌞ rename Ρ M ⌟
+rename                 (Ρ , ρ) (` x)     = ` ρ x
+rename                 (Ρ , ρ) (ƛ M)     = ƛ rename (Ρ , ext ρ) M
+rename                 (Ρ , ρ) (M · N)   = rename (Ρ , ρ) M · rename (Ρ , ρ) N
+rename                 (Ρ , ρ) ⟨⟩        = ⟨⟩
+rename                 (Ρ , ρ) ⟨ M , N ⟩ = ⟨ rename (Ρ , ρ) M , rename (Ρ , ρ) N ⟩
+rename                 (Ρ , ρ) (proj₁ M) = proj₁ rename (Ρ , ρ) M
+rename                 (Ρ , ρ) (proj₂ M) = proj₂ rename (Ρ , ρ) M
+rename                 (Ρ , ρ) ⌜ M ⌝     = ⌜ rename (Ρ , ρ , (λ x → x)) M ⌝
+rename {Ξ = _ , _ , _} (Ρ , ρ) ⌞ M ⌟     = ⌞ rename Ρ M ⌟
 
 data Subst : Cxts → Cxts → Set where
   ∅ : Subst ∅ Ξ
@@ -130,15 +130,15 @@ exts' Σ = Σ , `_
 `s {Ψ = Ψ , Γ} = `s , `_
 
 subst : Subst Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
-subst (Σ , σ) (` x) = σ x
-subst (Σ , σ) (ƛ M) = ƛ subst (Σ , exts σ) M
-subst (Σ , σ) (M · N) = subst (Σ , σ) M · subst (Σ , σ) N
-subst (Σ , σ) ⟨⟩ = ⟨⟩
-subst (Σ , σ) ⟨ M , N ⟩ = ⟨ subst (Σ , σ) M , subst (Σ , σ) N ⟩
-subst (Σ , σ) (proj₁ M) = proj₁ subst (Σ , σ) M
-subst (Σ , σ) (proj₂ M) = proj₂ subst (Σ , σ) M
-subst (Σ , σ) ⌜ M ⌝ = ⌜ subst (exts' (Σ , σ)) M ⌝
-subst {Ξ = Ξ , _ , _} (Σ , σ) ⌞ M ⌟ = ⌞ subst Σ M ⌟
+subst                 (Σ , σ) (` x)     = σ x
+subst                 (Σ , σ) (ƛ M)     = ƛ subst (Σ , exts σ) M
+subst                 (Σ , σ) (M · N)   = subst (Σ , σ) M · subst (Σ , σ) N
+subst                 (Σ , σ) ⟨⟩        = ⟨⟩
+subst                 (Σ , σ) ⟨ M , N ⟩ = ⟨ subst (Σ , σ) M , subst (Σ , σ) N ⟩
+subst                 (Σ , σ) (proj₁ M) = proj₁ subst (Σ , σ) M
+subst                 (Σ , σ) (proj₂ M) = proj₂ subst (Σ , σ) M
+subst                 (Σ , σ) ⌜ M ⌝     = ⌜ subst (exts' (Σ , σ)) M ⌝
+subst {Ξ = _ , _ , _} (Σ , σ) ⌞ M ⌟     = ⌞ subst Σ M ⌟
 
 _[_] : Ψ , (Γ , B) ⊢ A
      → Ψ , Γ ⊢ B
