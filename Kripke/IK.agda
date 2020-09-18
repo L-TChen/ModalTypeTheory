@@ -7,7 +7,7 @@ open import Relation.Binary.PropositionalEquality as PropEq
   using (_≡_; refl)
 
 open import Type
-open import Context
+open import Context hiding ([_])
 
 infix  3 _⊢_
 
@@ -90,82 +90,65 @@ _ = ƛ ⌜ ⟨ ⌞ proj₁ # 0 ⌟  , ⌞ proj₂ # 0 ⌟ ⟩ ⌝
 ------------------------------------------------------------------------------
 -- Substitution
 
-rename : (Ψ : Cxts)
-  → (∀ {A} → Γ ∋ A → Δ ∋ A)
-  → (Ξ , Γ ⧺ Ψ ⊢ A)
-  → (Ξ , Δ ⧺ Ψ ⊢ A)
-rename ∅             ρ (` x)     = ` ρ x
-rename (∅ , _)       ρ (` x)     = ` x
-rename (_ , _ , _)   ρ (` x)     = ` x
-rename ∅             ρ (ƛ M)     = ƛ rename ∅ (ext ρ) M
-rename (∅ , Γ)       ρ (ƛ M)     = ƛ rename (∅ , (Γ , _)) ρ M
-rename (Ψ@(_ , _) , Γ) ρ (ƛ M)   = ƛ rename (Ψ , (Γ , _)) ρ M
-rename ∅             ρ (M · N)   = rename ∅ ρ M · rename ∅ ρ N
-rename Ψ@(_ , _)     ρ (M · N)   = rename Ψ ρ M · rename Ψ ρ N
-rename ∅             ρ ⟨⟩        = ⟨⟩
-rename (_ , _)       ρ ⟨⟩        = ⟨⟩
-rename ∅             ρ ⟨ M , N ⟩ = ⟨ rename ∅ ρ M , rename ∅ ρ N ⟩
-rename Ψ@(_ , _)     ρ ⟨ M , N ⟩ = ⟨ rename Ψ ρ M , rename Ψ ρ N ⟩
-rename ∅             ρ (proj₁ M) = proj₁ rename ∅ ρ M 
-rename Ψ@(_ , _)     ρ (proj₁ M) = proj₁ rename Ψ ρ M 
-rename ∅             ρ (proj₂ M) = proj₂ rename ∅ ρ M 
-rename Ψ@(_ , _)     ρ (proj₂ M) = proj₂ rename Ψ ρ M 
-rename ∅             ρ ⌜ M ⌝     = ⌜ rename [] ρ M ⌝
-rename (Ψ , Γ)       ρ ⌜ M ⌝     = ⌜ rename (Ψ , Γ , ∅) ρ M ⌝
-rename ∅             ρ ⌞ M ⌟     = ⌞ M ⌟
-rename (∅ , Γ)       ρ ⌞ M ⌟     = ⌞ rename ∅  ρ M ⌟
-rename (Ψ@(_ , _) , _) ρ ⌞ M ⌟   = ⌞ rename Ψ ρ M ⌟
+data Rename : Cxts → Cxts → Set where
+  ∅ : Rename ∅ Ξ
+  _,_ : Rename Ψ Ξ → ({A : Type} → Γ ∋ A → Δ ∋ A) → Rename (Ψ , Γ) (Ξ , Δ)
+
+ext' : Rename Ψ Ξ → Rename (Ψ , Γ) (Ξ , Γ)
+ext' Ρ = Ρ , λ x → x
+
+ids : Rename Ψ Ψ
+ids {Ψ = ∅} = ∅
+ids {Ψ = Ψ , Γ} = ids , (λ z → z)
+
+rename : Rename Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
+rename (Ρ , ρ) (` x) = ` ρ x
+rename (Ρ , ρ) (ƛ M) = ƛ rename (Ρ , ext ρ) M
+rename (Ρ , ρ) (M · N) = rename (Ρ , ρ) M · rename (Ρ , ρ) N
+rename (Ρ , ρ) ⟨⟩ = ⟨⟩
+rename (Ρ , ρ) ⟨ M , N ⟩ = ⟨ rename (Ρ , ρ) M , rename (Ρ , ρ) N ⟩
+rename (Ρ , ρ) (proj₁ M) = proj₁ rename (Ρ , ρ) M
+rename (Ρ , ρ) (proj₂ M) = proj₂ rename (Ρ , ρ) M
+rename (Ρ , ρ) ⌜ M ⌝ = ⌜ rename (Ρ , ρ , (λ x → x)) M ⌝
+rename {Ξ = Ξ , _ , _} (Ρ , ρ) ⌞ M ⌟ = ⌞ rename Ρ M ⌟
+
+data Subst : Cxts → Cxts → Set where
+  ∅ : Subst ∅ Ξ
+  _,_ : Subst Ψ Ξ → ({A : Type} → Γ ∋ A → Ξ , Δ ⊢ A) → Subst (Ψ , Γ) (Ξ , Δ)
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
   → Γ , B ∋ A
   → Ψ , (Δ , B) ⊢ A
 exts σ Z     = ` Z
-exts σ (S p) = rename ∅ S_ (σ p)
+exts σ (S p) = rename (ids , S_) (σ p)
 
-subst : (Ψ : Cxts) {Γ Δ : Cxt}
-  → ({A : Type} → Γ ∋ A → Ξ , Δ ⊢ A)
-  → Ξ , Γ ⧺ Ψ ⊢ A
-  → Ξ , Δ ⧺ Ψ ⊢ A
-subst ∅             σ (` x)     = σ x
-subst (∅ , _)       σ (` x)     = ` x
-subst (_ , _ , _)   σ (` x)     = ` x
-subst ∅             σ (ƛ M)     = ƛ subst ∅ (exts σ) M
-subst (∅ , Γ₀)      σ (ƛ M)     = ƛ subst (∅ , (Γ₀ , _)) σ M
-subst (Ψ@(_ , _) , Γ) σ (ƛ M)   = ƛ subst (Ψ , (Γ , _)) σ M
-subst ∅             σ (M · N)   = subst ∅ σ M · subst ∅ σ N
-subst Ψ@(_ , _)     σ (M · N)   = subst Ψ σ M · subst Ψ σ N
-subst ∅             σ ⟨⟩        = ⟨⟩
-subst (_ , _)       σ ⟨⟩        = ⟨⟩
-subst ∅             σ ⟨ M , N ⟩ = ⟨ subst ∅ σ M , subst ∅ σ N ⟩
-subst Ψ@(_ , _)     σ ⟨ M , N ⟩ = ⟨ subst Ψ σ M , subst Ψ σ N ⟩
-subst ∅             σ (proj₁ M) = proj₁ subst ∅ σ M 
-subst Ψ@(_ , _)     σ (proj₁ M) = proj₁ subst Ψ σ M 
-subst ∅             σ (proj₂ M) = proj₂ subst ∅ σ M 
-subst Ψ@(_ , _)     σ (proj₂ M) = proj₂ subst Ψ σ M 
-subst ∅             σ ⌜ M ⌝     = ⌜ subst [] σ M ⌝
-subst (Ψ , Γ)       σ ⌜ M ⌝     = ⌜ subst (Ψ , Γ , ∅) σ M ⌝
-subst ∅             σ ⌞ M ⌟     = ⌞ M ⌟
-subst (∅ , _)       σ ⌞ M ⌟     = ⌞ subst ∅ σ M ⌟
-subst (Ψ@(_ , _) , _) σ ⌞ M ⌟   = ⌞ subst Ψ σ M ⌟
+exts' : Subst Ψ Ξ → Subst (Ψ , Γ) (Ξ , Γ)
+exts' Σ = Σ , `_
 
-_[_]ₙ : Ψ , (Γ , B) ⧺ Ξ ⊢ A
-     → Ψ , Γ ⊢ B
-     → Ψ , Γ ⧺ Ξ ⊢ A
-_[_]ₙ {Ψ} {Γ} {B} {Ξ} N M = subst Ξ σ N
-  where
-    σ : Γ , B ∋ A → Ψ , Γ ⊢ A
-    σ Z     = M
-    σ (S p) = ` p
+`s : Subst Ψ Ψ
+`s {Ψ = ∅} = ∅
+`s {Ψ = Ψ , Γ} = `s , `_
+
+subst : Subst Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
+subst (Σ , σ) (` x) = σ x
+subst (Σ , σ) (ƛ M) = ƛ subst (Σ , exts σ) M
+subst (Σ , σ) (M · N) = subst (Σ , σ) M · subst (Σ , σ) N
+subst (Σ , σ) ⟨⟩ = ⟨⟩
+subst (Σ , σ) ⟨ M , N ⟩ = ⟨ subst (Σ , σ) M , subst (Σ , σ) N ⟩
+subst (Σ , σ) (proj₁ M) = proj₁ subst (Σ , σ) M
+subst (Σ , σ) (proj₂ M) = proj₂ subst (Σ , σ) M
+subst (Σ , σ) ⌜ M ⌝ = ⌜ subst (exts' (Σ , σ)) M ⌝
+subst {Ξ = Ξ , _ , _} (Σ , σ) ⌞ M ⌟ = ⌞ subst Σ M ⌟
 
 _[_] : Ψ , (Γ , B) ⊢ A
      → Ψ , Γ ⊢ B
      → Ψ , Γ ⊢ A
-N [ M ] = _[_]ₙ {Ξ = ∅} N M
+N [ M ] = subst (`s , λ { Z → M ; (S x) → ` x }) N
 
 ↑_
   : Ψ , ∅ ⊢ A
   → Ψ , Γ ⊢ A
-↑ M = subst ∅ (λ ()) M
+↑ M = subst (`s , λ ()) M
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
