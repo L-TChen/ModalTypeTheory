@@ -357,7 +357,7 @@ progress (proj₂ MN) with progress MN
 progress (mlet N M)  with progress N
 ... | step N→N′      = step (ξ-mlet₁ N→N′)
 ... | done (mfix N′) = step β-mfix
-progress (mfix M)    = {!!}
+progress (mfix M)    = done (mfix M)
 
 ------------------------------------------------------------------------------
 -- -↠ is a congruence (tedious, any better way?)
