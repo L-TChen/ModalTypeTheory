@@ -1,21 +1,21 @@
 module Translation.IK where
 
+open import Data.Sum hiding (map)
+
 open import Kripke.IK as K using (_⊢_)
 open import Dual.IK   as D using (_︔_⊢_)
-open import Data.Sum hiding (map)
-open import Type
+open _⊢_
+open _︔_⊢_
+open K.Rename
+open K.Subst
+
 open import Context
 
 private
   variable
     A B : Type 
-    Γ Δ : Context Type
-    Ψ Ξ : Context (Context Type)
-
-open _⊢_
-open _︔_⊢_
-open K.Rename
-open K.Subst
+    Γ Δ : Cxt
+    Ψ Ξ : Cxts
 
 scott
   : ∅ , (Δ ⧺ Γ)      ⊢ A

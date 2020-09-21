@@ -15,42 +15,26 @@ module Kripke.IGL where
 open import Data.Nat
 
 open import Context
+  hiding ([_])
 
 infix  3 _⊢_
-
-infixr 7 _→̇_
-infixr 8 _×̇_
-infix  9 □_
 
 infixr 5 λ̇_
 infix  6 ⟨_,_⟩
 infixl 7 _·_
-infix  8 ⌈_⌉
-infixr 8 ⌊_⌋
-infix  9 `_
-infixr 9 proj₁_
-infixr 9 proj₂_
+infix  8 ⌈_⌉ ⌊_⌋
+infixr 9 `_ proj₁_ proj₂_
 infix  10 #_
 
-data Type : Set
-Cxt  = Context Type
-Cxts = Context Cxt
 data _⊢_ : Cxts → Type → Set
 
 private
   variable
-    n m l i j k : ℕ
-    Ty  : Set
-    Γ Δ Δ₁ Δ₂ : Context Ty
-    Ψ Ξ : Context (Context Ty)
-    A B C : Type
+    n m l  : ℕ
+    Γ Δ Δ₁ Δ₂ : Cxt
+    Ψ Ξ       : Cxts
+    A B C     : Type
     M N L M′ N′ L′ : Ψ ⊢ A
-
-data Type where
-  ⊥̇    : Type
-  _×̇_  : Type → Type → Type
-  _→̇_  : Type → Type → Type
-  □_   : Type → Type
 
 ------------------------------------------------------------------------------
 -- Typing Rules

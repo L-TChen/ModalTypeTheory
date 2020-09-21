@@ -5,43 +5,29 @@ module Dual.IGL where
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality as PropEq
   using (_≡_; refl)
+
 open import Context
+  hiding ([_])
 
 infix  3 _︔_⊢_
 
-infixr 6 _→̇_
-infixr 7 _×̇_
 infixr 8 ¬̇_ 
-infix  9 □_
 
 infixr 5 λ̇_
 infix  6 ⟨_,_⟩
-infixr 6 proj₁_
-infixr 6 proj₂_
+infixr 6 proj₁_ proj₂_
 infixl 7 _·_
-infixl 8 _[_]
-infixl 8 _[_]ᵐ
-infix  9 `_
-infix  9 #_
+infixl 8 _[_] _[_]ᵐ
+infix  9 `_ #_
 
-data Type : Set
-Cxt  = Context Type
-Cxts = Context Cxt
 data _︔_⊢_ : Cxt → Cxt → Type → Set
 
 private
   variable
-    n m l i j k : ℕ
-    Ty  : Set
-    Γ Δ Γ′ Δ′ : Context Ty
-    A B : Type
+    n m l          : ℕ
+    Γ Δ Γ′ Δ′      : Cxt
+    A B            : Type
     M N L M′ N′ L′ : Δ ︔ Γ ⊢ A
-
-data Type where
-  ⊥̇    : Type
-  _×̇_  : Type → Type → Type
-  _→̇_ : Type → Type → Type
-  □_   : Type → Type
 
 ¬̇_ : Type → Type
 ¬̇_ A = A →̇ ⊥̇
@@ -183,8 +169,7 @@ msubst σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
 msubst σ (proj₁ M)  = proj₁ msubst σ M
 msubst σ (proj₂ M)  = proj₂ msubst σ M
 msubst σ (mlet L M) = mlet (msubst σ L) (msubst (mexts σ) M)
-msubst {Δ} {Δ′} {Γ} σ (mfix {A = A} M) =
-  mfix (msubst {!!} {!M!})
+msubst {Δ} {Δ′} {Γ} σ (mfix {A = A} M) = {!!}
   where 
     σ₁ : {B : Type} → Δ , □ A ∋ B → Δ′ ︔ Δ′ , □ A ⊢ B  
     σ₁ Z     = {!!}

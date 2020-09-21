@@ -6,26 +6,22 @@ open import Data.Nat
 open import Relation.Binary.PropositionalEquality as PropEq
   using (_≡_; refl)
 
-open import Type
 open import Context hiding ([_])
 
 infix  3 _⊢_
 
 infixr 5 ƛ_
 infix  6 ⟨_,_⟩
-infixr 6 proj₁_
-infixr 6 proj₂_
+infixr 6 proj₁_ proj₂_
 infixl 7 _·_
 infixl 8 _[_]
-infix  9 `_
-infix  9 #_
+infix  9 `_ #_
 
-Cxt  = Context Type
-Cxts = Context Cxt
 data _⊢_ : Cxts → Type → Set
 
 private
   variable
+    n              : ℕ
     Γ Δ Γ′ Δ′      : Cxt
     Ψ Ξ Ψ′ Ξ′      : Cxts
     A B            : Type
@@ -282,10 +278,6 @@ L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -�
 ∅ₙ : ℕ → Cxts 
 ∅ₙ zero    = ∅
 ∅ₙ (suc n) = ∅ₙ n , ∅
-
-private
-  variable
-    n : ℕ
 
 data Value {n : ℕ} : ∅ₙ (suc n) ⊢ A → Set where
   V-ƛ

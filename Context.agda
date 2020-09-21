@@ -8,25 +8,31 @@ open import Data.Empty
 open import Data.Sum hiding (map)
 open import Relation.Binary.PropositionalEquality as P using (_≡_)
 
+open import Type public
+
 infix  4 _∋_
 infixl 5 _⧺_
 infixl 6 _,_
 
-data Context (Ty : Set) : Set where
-  ∅   : Context Ty
-  _,_ : (Γ : Context Ty) → (T : Ty) → Context Ty
-
--- A shorthand for empty stack
-pattern [] = ∅ , ∅
-
-[_] : {A : Set} → A → Context A
-[ A ] = ∅ , A
+data Context (Ty : Set) : Set
 
 private
   variable
     Ty  : Set
     Γ Δ : Context Ty
     A B : Ty
+
+data Context Ty where
+  ∅   : Context Ty
+  _,_ : (Γ : Context Ty) → (T : Ty) → Context Ty
+
+Cxt  = Context Type
+Cxts = Context Cxt
+
+pattern [] = ∅ , ∅
+
+[_] : {A : Set} → A → Context A
+[ A ] = ∅ , A
 
 _⧺_ : Context Ty → Context Ty → Context Ty
 Γ ⧺ ∅       = Γ

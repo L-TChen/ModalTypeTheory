@@ -10,7 +10,6 @@ open import Data.Sum
 open import Relation.Binary.PropositionalEquality as PropEq
   using (_≡_; refl)
 
-open import Type      public
 open import Context   public
   hiding ([_])
 
@@ -23,7 +22,6 @@ infixl 7 _·_
 infixl 8 _[_]
 infix  9 `_ ᵒ_ #_ m#_
 
-Cxt  = Context Type
 data _︔_⊢_ (Δ Γ : Cxt) : Type → Set
 
 private
