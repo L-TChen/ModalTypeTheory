@@ -2,9 +2,12 @@
 
 module Dual.IGL where
 
+open import Data.Sum
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality as PropEq
   using (_≡_; refl)
+open import Function
+  hiding (_∋_)
 
 open import Context
   hiding ([_])
@@ -13,11 +16,11 @@ infix  3 _︔_⊢_
 
 infixr 8 ¬̇_ 
 
-infixr 5 λ̇_
+infixr 5 ƛ_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
-infixl 8 _[_] _[_]ᵐ
+infixl 8 _[_] _m[_]
 infix  9 `_ #_
 
 data _︔_⊢_ : Cxt → Cxt → Type → Set
@@ -39,7 +42,7 @@ data _︔_⊢_ where
        ---------
      → Δ ︔ Γ ⊢ A
 
-  λ̇_  : Δ ︔ (Γ , A) ⊢ B
+  ƛ_  : Δ ︔ (Γ , A) ⊢ B
         ----------------
       → Δ ︔ Γ ⊢ A →̇ B
 
@@ -48,9 +51,7 @@ data _︔_⊢_ where
         ----------
       → Δ ︔ Γ ⊢ B
 
-  absurd
-    : Δ ︔ Γ ⊢ ⊥̇
-    → Δ ︔ Γ ⊢ A
+  ⟨⟩    : Δ ︔ Γ ⊢ ⊤̇
 
   ⟨_,_⟩ : Δ ︔ Γ ⊢ A 
         → Δ ︔ Γ ⊢ B
@@ -63,14 +64,14 @@ data _︔_⊢_ where
          → Δ ︔ Γ ⊢ B
 
   mlet
-      : Δ ︔ Γ ⊢ □ A
+      : Δ     ︔ Γ ⊢ □ A
       → Δ , A ︔ Γ ⊢ B
         ---------
       → Δ ︔ Γ ⊢ B
 
-  mfix : Δ ︔ Δ , □ A ⊢ A
+  mfix_ : Δ ︔ Δ , □ A ⊢ A
        --------------
-      → Δ ︔ Γ ⊢ □ A
+       → Δ ︔ Γ ⊢ □ A
 
 #_ : (n : ℕ) → Δ ︔ Γ ⊢ lookup Γ n
 # n  =  ` count n
@@ -79,70 +80,56 @@ data _︔_⊢_ where
 -- Examples
 
 GL : ∅ ︔ ∅ ⊢ □ (□ A →̇ A) →̇ □ A
-GL = λ̇ mlet (# 0) (mfix (# 1 · # 0))
+GL = ƛ mlet (# 0) (mfix (# 1 · # 0))
 
-incomplete : ∅ ︔ ∅ ⊢ ¬̇ □ ⊥̇ →̇ ¬̇ □ (¬̇ □ ⊥̇)
-incomplete = {!!}
+------------------------------------------------------------------------------
+-- Substitution and structural rules 
 
-mapp : Δ ︔ Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-mapp {Δ} {Γ} {A} {B} = {!!}
+Rename : Cxt → Cxt → Set
+Rename Γ Γ′ = ∀ {A} → Γ ∋ A → Γ′ ∋ A
 
-Lob : Δ ︔ Γ ⊢ □ (□ A →̇ A) →̇ □ A 
-Lob = {!!}
-
-------------------------------------------------------------------
--- Substitution
-
-rename : (∀ {A} → Γ ∋ A → Γ′ ∋ A)
-  → (Δ ︔ Γ  ⊢ A)
-  → (Δ ︔ Γ′ ⊢ A)
+rename : Rename Γ Γ′
+  → Δ ︔ Γ  ⊢ A
+  → Δ ︔ Γ′ ⊢ A
 rename ρ (` x)      = ` ρ x
-rename ρ (λ̇ M)      = λ̇ rename (ext ρ) M
+rename ρ (ƛ M)      = ƛ rename (ext ρ) M
 rename ρ (M · N)    = rename ρ M · rename ρ N
-rename ρ (absurd M) = absurd (rename ρ M)
+rename ρ ⟨⟩         = ⟨⟩
 rename ρ ⟨ M , N ⟩  = ⟨ rename ρ M , rename ρ N ⟩
 rename ρ (proj₁ M)  = proj₁ rename ρ M
 rename ρ (proj₂ M)  = proj₂ rename ρ M
 rename ρ (mlet M N) = mlet (rename ρ M) (rename ρ N)
 rename ρ (mfix M)   = mfix M
 
-mrename : (∀ {A} → Δ ∋ A → Δ′ ∋ A)
-  → (Δ  ︔ Γ ⊢ A)
-  → (Δ′ ︔ Γ ⊢ A)
+mrename : Rename Δ Δ′
+  → Δ  ︔ Γ ⊢ A
+  → Δ′ ︔ Γ ⊢ A
 mrename ρ (` x)      = ` x 
-mrename ρ (λ̇ M)      = λ̇ mrename ρ M
+mrename ρ (ƛ M)      = ƛ mrename ρ M
 mrename ρ (M · N)    = mrename ρ M · mrename ρ N
-mrename ρ (absurd M) = absurd (mrename ρ M)
+mrename ρ ⟨⟩         = ⟨⟩
 mrename ρ ⟨ M , N ⟩  = ⟨ mrename ρ M , mrename ρ N ⟩
 mrename ρ (proj₁ M)  = proj₁ mrename ρ M
 mrename ρ (proj₂ N)  = proj₂ mrename ρ N
 mrename ρ (mlet L M) = mlet (mrename ρ L) (mrename (ext ρ) M)
 mrename ρ (mfix M )  = mfix (rename (ext ρ) (mrename ρ M))
 
-exts : ({A : Type} → Γ ∋ A → Δ ︔ Γ′ ⊢ A)
-  → Γ , B ∋ A
-  → Δ ︔ (Γ′ , B) ⊢ A
+Subst : Cxt → Cxt → Cxt → Set
+Subst Δ Γ Γ′ = ∀ {A} → Γ ∋ A → Δ ︔ Γ′ ⊢ A
+
+exts
+  : Subst Δ Γ Γ′ 
+  → Subst Δ (Γ , B) (Γ′ , B)
 exts σ Z     = ` Z
 exts σ (S p) = rename S_ (σ p)
 
-
-mexts : ({A : Type} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A)
-  → Δ , B ∋ A
-  → Δ′ , B ︔ Δ′ , B , □ A ⊢ A
-mexts σ Z     = ` (S Z)
-mexts σ (S x) =  rename σ′ (mrename S_ (σ x))
-  where
-    σ′ : {A C : Type} → Δ′ , □ A ∋ C → Δ′ , B , □ A ∋ C
-    σ′ Z     = Z
-    σ′ (S x) = S (S x)
-
-subst : ({A : Type} → Γ ∋ A → Δ ︔ Γ′ ⊢ A)
+subst : Subst Δ Γ Γ′
   → Δ ︔ Γ  ⊢ A
   → Δ ︔ Γ′ ⊢ A
 subst σ (` x)      = σ x
-subst σ (λ̇ M)      = λ̇ subst (exts σ) M
+subst σ (ƛ M)      = ƛ subst (exts σ) M
 subst σ (M · N)    = subst σ M · subst σ N
-subst σ (absurd M) = absurd (subst σ M)
+subst σ ⟨⟩         = ⟨⟩
 subst σ ⟨ M , N ⟩  = ⟨ subst σ M , subst σ N ⟩
 subst σ (proj₁ M)  = proj₁ subst σ M
 subst σ (proj₂ N)  = proj₂ subst σ N
@@ -158,298 +145,223 @@ _[_] {Δ} {Γ} {B} M N = subst σ M
   σ Z      =  N 
   σ (S x)  =  ` x  
 
-msubst : ({A : Type} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A)
+wk₁ : Δ ︔ Γ ⊢ A
+    → Δ ︔ Γ , B ⊢ A
+wk₁ = rename S_
+
+------------------------------------------------------------------------------
+-- Modal substitution and structural rules 
+
+MSubst : Cxt → Cxt → Set
+MSubst Δ Δ′ = ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A
+  
+mexts
+  : MSubst Δ Δ′
+  → MSubst (Δ , B) (Δ′ , B) 
+mexts σ Z     = ` (S Z)
+mexts σ (S x) =  rename σ′ (mrename S_ (σ x))
+  where
+    σ′ : {A C : Type} → Δ′ , □ A ∋ C → Δ′ , B , □ A ∋ C
+    σ′ Z     = Z
+    σ′ (S x) = S (S x)
+
+msubst 
+  : MSubst Δ Δ′
   → Δ  ︔ Γ ⊢ A
   → Δ′ ︔ Γ ⊢ A
-msubst σ (` x)      = ` x
-msubst σ (λ̇ M)      = λ̇ msubst σ M
-msubst σ (M · N)    = msubst σ M · msubst σ N
-msubst σ (absurd M) = absurd (msubst σ M)
-msubst σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
-msubst σ (proj₁ M)  = proj₁ msubst σ M
-msubst σ (proj₂ M)  = proj₂ msubst σ M
-msubst σ (mlet L M) = mlet (msubst σ L) (msubst (mexts σ) M)
-msubst {Δ} {Δ′} {Γ} σ (mfix {A = A} M) = {!!}
+msubst                  σ (` x)      = ` x
+msubst                  σ (ƛ M)      = ƛ msubst σ M
+msubst                  σ (M · N)    = msubst σ M · msubst σ N
+msubst                  σ ⟨⟩         = ⟨⟩
+msubst                  σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
+msubst                  σ (proj₁ M)  = proj₁ msubst σ M
+msubst                  σ (proj₂ M)  = proj₂ msubst σ M
+msubst                  σ (mlet L M) = mlet (msubst σ L)  (msubst (mexts σ) M)
+msubst {Δ} {Δ′} {Γ} {A} σ (mfix M)   = mfix ( subst (exts mσ) (msubst (wk₁ ∘ mσ) M) )
   where 
-    σ₁ : {B : Type} → Δ , □ A ∋ B → Δ′ ︔ Δ′ , □ A ⊢ B  
-    σ₁ Z     = {!!}
-    σ₁ (S x) = {!mfix (σ x)!}
+    mσ : ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ ⊢ A
+    mσ x = (σ x [ mfix (σ x) ])
   
 _m[_]
-  : Δ ︔ Δ , □ B ⊢ B
-  → Δ , B ︔ Γ ⊢ A
-  → Δ ︔ Γ ⊢ A
-_m[_] {Δ} {B} {Γ} M N = {!!}
-
-_[_]ᵐ 
   : Δ , B ︔ Γ ⊢ A
   → Δ ︔ Δ , □ B ⊢ B
   → Δ ︔ Γ ⊢ A
-(` x)      [ N ]ᵐ = ` x
-(λ̇ M)      [ N ]ᵐ = λ̇ M [ N ]ᵐ
-(L · M)    [ N ]ᵐ = L [ N ]ᵐ · M [ N ]ᵐ
-absurd M   [ N ]ᵐ = absurd (M [ N ]ᵐ)
-⟨ L , M ⟩  [ N ]ᵐ = ⟨ L [ N ]ᵐ , M [ N ]ᵐ ⟩
-(proj₁ M)  [ N ]ᵐ = proj₁ M [ N ]ᵐ
-(proj₂ M)  [ N ]ᵐ = proj₂ M [ N ]ᵐ
-mlet L M   [ N ]ᵐ = mlet (L [ N ]ᵐ) {!M!} --
-mfix M     [ N ]ᵐ = mfix {!M [ ? ]ᵐ !}
--- ------------------------------------------------------------------------------
--- -- Commutativity and associatitivy of substitution
+_m[_] {Δ} {B} {Γ} M N = msubst σ₁ M 
+  where
+    σ₁ : MSubst (Δ , B) Δ
+    σ₁ Z     = N
+    σ₁ (S x) = wk₁ (` x)
 
+m↑_ : ∅ ︔ Γ ⊢ A → Δ ︔ Γ ⊢ A
+m↑_ = mrename λ ()
 
--- -- ------------------------------------------------------------------------------
--- -- -- Single-step reduction
+mwk
+  : ∀ Δ′ 
+  → Δ     ⧺ Δ′ ︔ Γ ⊢ A
+  → Δ , B ⧺ Δ′ ︔ Γ ⊢ A
+mwk Δ′ = mrename (σ Δ′)
+  where
+    σ : ∀ Δ′ → Rename (Δ ⧺ Δ′) (Δ , B ⧺ Δ′)
+    σ Δ′ x with ⧺-∋ Δ′ x
+    ... | inj₁ Δ∋A = ∋-⧺⁺ˡ (S Δ∋A)
+    ... | inj₂ Γ∋A = ∋-⧺⁺ʳ (_ , _) Γ∋A
+------------------------------------------------------------------------------
+-- More examples
+-- The usual (□-intro) can be defined by mfix
 
--- -- infix 3 _-→_
--- -- data _-→_ : (M N : Ψ ⊢ A) → Set where
--- --   β-λ̇·
--- --     : (λ̇ M) · N -→ M [ N ]
--- --   β-⌊⌈⌉⌋
--- --     : ⌊ ⌈ M ⌉ ⌋ -→ M
--- --   ξ-λ̇
--- --     : M -→ M′
--- --     → λ̇ M -→ λ̇ M′    
--- --   ξ-·₁
--- --     : L -→ L′
--- --       ---------------
--- --     → L · M -→ L′ · M
--- --   ξ-·₂
--- --     : M -→ M′
--- --       ---------------
--- --     → L · M -→ L · M′
--- --   ξ-⌊⌋
--- --     : ∀ Γ
--- --     → M -→ M′
--- --     → ⌊_⌋ {Γ = Γ} M -→ ⌊ M′ ⌋
--- --   -- interesting
--- --   ξ-⌈⌉subst
--- --     : (M : Ψ , (Γ , A) , ∅ ⊢ B) {N N′ : Ψ , Γ ⊢ A}
--- --     → N -→ N′
--- --     → ⌈ M ⌉ [ N ] -→ ⌈ M ⌉ [ N′ ]
--- --  {-
--- --     no ξ for □, i.e.
+⌜_⌝ : ∅ ︔ Δ ⊢ A
+  → Δ ︔ Γ ⊢ □ A
+⌜_⌝ = mfix_ ∘ m↑_ ∘ wk₁
+
+K : Δ ︔ Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
+K {Δ} {Γ} {A} {B} = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ # 1 · # 0 ⌝)
+
+------------------------------------------------------------------------------
+-- Single-step reduction
+
+infix 3 _︔_⊢_-→_
+data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
+  β-ƛ·
+    : _ ︔ _ ⊢ (ƛ M) · N -→ M [ N ]
+  β-mfix
+    : _ ︔ _ ⊢ mlet (mfix M) N -→ N m[ wk₁ (M [ mfix M ]) ]
+  β-⟨,⟩proj₁
+    : _ ︔ _ ⊢ proj₁ ⟨ M , N ⟩ -→ M
+
+  β-⟨,⟩proj₂
+    : _ ︔ _ ⊢ proj₂ ⟨ M , N ⟩ -→ N
+  ξ-ƛ
+    : _ ︔ _ ⊢ M -→ M′
+    → _ ︔ _ ⊢ ƛ M -→ ƛ M′    
+  ξ-·₁
+    : _ ︔ _ ⊢ L -→ L′
+      ---------------
+    → _ ︔ _ ⊢ L · M -→ L′ · M
+  ξ-·₂
+    : _ ︔ _ ⊢ M -→ M′
+      ---------------
+    → _ ︔ _ ⊢ L · M -→ L · M′
+  ξ-⟨,⟩₁
+    : _ ︔ _ ⊢ M -→ M′
+    → _ ︔ _ ⊢ ⟨ M , N ⟩ -→ ⟨ M′ , N ⟩
+  ξ-⟨,⟩₂
+    : _ ︔ _ ⊢ N -→ N′
+    → _ ︔ _ ⊢ ⟨ M , N ⟩ -→ ⟨ M , N′ ⟩
+  ξ-proj₁
+    : _ ︔ _ ⊢ M -→ N
+    → _ ︔ _ ⊢ proj₁ M -→ proj₁ N
+
+  ξ-proj₂
+    : _ ︔ _ ⊢ M -→ N
+    → _ ︔ _ ⊢ proj₂ M -→ proj₂ N
+
+  ξ-mlet₁
+    : _ ︔ _ ⊢ N -→ N′
+    → _ ︔ _ ⊢ mlet N M -→ mlet N′ M
+
+  ξ-mlet₂
+    : _ ︔ _ ⊢ M -→ M′
+    → _ ︔ _ ⊢ mlet N M -→ mlet N M′
+
+  ξ-mfix
+    : Δ ︔ Δ , □ A ⊢ M -→ M′
+    → Δ ︔ Γ       ⊢ mfix M -→ mfix M′
     
--- --     ξ-⌈⌉ : M -→ M′
--- --          → ⌈ M ⌉ -→ ⌈ M′ ⌉
+  δ-proj₁-mlet
+    : Δ ︔ Γ ⊢ proj₁ (mlet N M) -→ mlet N (proj₁ M)
 
--- --     as □ A is understood as the closed term of A
--- --  -}  
--- -- ------------------------------------------------------------------------------
--- -- -- Transitive and reflexive closure of -→ 
+  δ-proj₂-mleqt
+    : Δ ︔ Γ ⊢ proj₂ (mlet N M) -→ mlet N (proj₂ M)
 
--- -- infix  2 _-↠_
--- -- infix  0 begin_
--- -- infixr 2 _-→⟨_⟩_
--- -- infixr 2 _-↠⟨_⟩_
--- -- infix  3 _∎
+  δ-·-mlet
+    : Δ ︔ Γ ⊢ (mlet N L) · M -→ mlet N (L · mwk ∅ M)
 
--- -- data _-↠_ : (M N : Ψ ⊢ A) → Set where
--- --   refl-↠ : {M : Ψ ⊢ A}
--- --     → M -↠ M
-    
--- --   _-→⟨_⟩_
--- --     : ∀ L
--- --     → L -→ M
--- --     → M -↠ N
--- --        -------
--- --     → L -↠ N
+  δ-mlet-mlet
+    : Δ ︔ Γ ⊢ mlet (mlet N L) M -→ mlet N (mlet L (mwk (∅ , _) M))
 
--- -- pattern _∎ M = refl-↠ {M = M}
+------------------------------------------------------------------------------
+-- Transitive and reflexive closure of -→ 
 
--- -- begin_
--- --   : M -↠ N
--- --   → M -↠ N
--- -- begin M-↠N = M-↠N
+infix  2 _︔_⊢_-↠_
+infix  0 begin_
+infixr 2 _-→⟨_⟩_ _-↠⟨_⟩_
+infix  3 _∎
 
--- -- _-↠⟨_⟩_
--- --   : ∀ L
--- --   → L -↠ M
--- --   → M -↠ N
--- --   → L -↠ N
--- -- M -↠⟨ refl-↠ ⟩ M-↠N             = M-↠N
--- -- L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -↠⟨ M-↠N ⟩ N-↠N′)
+data _︔_⊢_-↠_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
+  _∎
+    : (M : Δ ︔ Γ ⊢ A)
+    → Δ ︔ Γ ⊢ M -↠ M
+ 
+  _-→⟨_⟩_
+    : ∀ L
+    → Δ ︔ Γ ⊢ L -→ M
+    → Δ ︔ Γ ⊢ M -↠ N
+       -------
+    → Δ ︔ Γ ⊢ L -↠ N
 
--- -- ------------------------------------------------------------------------------
--- -- -- -↠ is a congruence (tedious, any better way?)
--- -- λ̇-↠ : M -↠ M′ → λ̇ M -↠ λ̇ M′
--- -- λ̇-↠ refl-↠               = refl-↠
--- -- λ̇-↠ (M -→⟨ M-→M′ ⟩ M-→N) = λ̇ M -→⟨ ξ-λ̇ M-→M′ ⟩ (λ̇-↠ M-→N)
-  
--- -- ·₁-↠ : M -↠ M′ → M · N -↠ M′ · N
--- -- ·₁-↠ refl-↠               = refl-↠
--- -- ·₁-↠ (M -→⟨ M-→M′ ⟩ M-↠N) = M · _ -→⟨ ξ-·₁ M-→M′ ⟩ (·₁-↠ M-↠N)
+begin_
+  : Δ ︔ Γ ⊢ M -↠ N
+  → Δ ︔ Γ ⊢ M -↠ N
+begin M-↠N = M-↠N
 
--- -- ·₂-↠ : N -↠ N′ → M · N -↠ M · N′
--- -- ·₂-↠ refl-↠               = refl-↠
--- -- ·₂-↠ (M -→⟨ M-→M′ ⟩ M-↠N) = _ · M -→⟨ ξ-·₂ M-→M′ ⟩ (·₂-↠ M-↠N)
+_-↠⟨_⟩_
+  : ∀ L
+  → Δ ︔ Γ ⊢ L -↠ M
+  → Δ ︔ Γ ⊢ M -↠ N
+  → Δ ︔ Γ ⊢ L -↠ N
+M -↠⟨ M ∎ ⟩ M-↠N                = M-↠N
+L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -↠⟨ M-↠N ⟩ N-↠N′)
 
--- -- ⌊⌋-↠ : ∀ Γ
--- --   → M -↠ N
--- --   → ⌊_⌋ {Γ = Γ} M -↠ ⌊ N ⌋
--- -- ⌊⌋-↠ _ refl-↠               = refl-↠
--- -- ⌊⌋-↠ Γ (M -→⟨ M-→M′ ⟩ M-↠N) = _ -→⟨ ξ-⌊⌋ _ M-→M′ ⟩ ⌊⌋-↠ Γ M-↠N
+data Value : (M : ∅ ︔ ∅ ⊢ A) → Set where
+  ƛ_
+    : (N : ∅ ︔ ∅ , A ⊢ B)
+      -------------------
+    → Value (ƛ N)
 
+  mfix_
+    : (M : _ ︔ _ ⊢ A)
+    → Value (mfix M)
 
--- -- ⌈⌉-↠ : N -↠ N′
--- --   → ⌈ M ⌉ [ N ] -↠ ⌈ M ⌉ [ N′ ]
--- -- ⌈⌉-↠  refl-↠                 = refl-↠
--- -- ⌈⌉-↠ {M = M} (N -→⟨ L-→M₁ ⟩ M₁-↠N′) =
--- --   ⌈ M ⌉ [ N ] -→⟨ ξ-⌈⌉subst M L-→M₁ ⟩ ⌈⌉-↠ {M = M} M₁-↠N′ 
+  ⟨⟩
+    : Value ⟨⟩
 
--- -- ------------------------------------------------------------------------------
--- -- -- Parallel reduction, see
--- -- -- M. Takahashi, “Parallel Reductions in λ-Calculus,” Inf. Comput., vol. 118, no. 1, pp. 120–127, 1995.
+  ⟨_,_⟩
+    : (M : ∅ ︔ ∅ ⊢ A)
+    → (N : ∅ ︔ ∅ ⊢ B)
+    → Value ⟨ M , N ⟩
 
--- -- infix 3 _=⇒_
--- -- data _=⇒_  : ∀ {Ψ A} → (M N : Ψ ⊢ A) → Set where
--- --   refl-` : {x : Γ ∋ A}
--- --        → `_ {Ψ = Ψ} x =⇒ ` x
+data Progress (M : ∅ ︔ ∅ ⊢ A) : Set where
+  step
+    : ∅ ︔ ∅ ⊢ M -→ N
+      --------------
+    → Progress M
 
--- --   refl-⌈⌉
--- --     : ⌈ M ⌉ =⇒ ⌈ M ⌉
+  done
+    : Value M
+    → Progress M
 
--- --   β-λ̇·
--- --     : M =⇒ M′
--- --     → N =⇒ N′
--- --       ----------------------
--- --     → (λ̇ M) · N =⇒ M′ [ N′ ]
+progress : (M : ∅ ︔ ∅ ⊢ A) → Progress M
+progress (ƛ M)       = done (ƛ M)
+progress (M · N)    with progress M | progress N
+... | step M→M′   | _         = step (ξ-·₁ M→M′)
+... | _           | step N→N′ = step (ξ-·₂ N→N′)
+... | done (ƛ M′) | done vN   = step β-ƛ·
+progress ⟨⟩          = done ⟨⟩
+progress ⟨ M , N ⟩   = done ⟨ M , N ⟩
+progress (proj₁ MN) with progress MN
+... | step M-→N      = step (ξ-proj₁ M-→N)
+... | done ⟨ _ , _ ⟩ = step β-⟨,⟩proj₁
+progress (proj₂ MN) with progress MN
+... | step M-→N      = step (ξ-proj₂ M-→N)
+... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
+progress (mlet N M)  with progress N
+... | step N→N′      = step (ξ-mlet₁ N→N′)
+... | done (mfix N′) = step β-mfix
+progress (mfix M)    = {!!}
 
--- --   β-⌊⌈⌉⌋
--- --     : M =⇒ N
--- --       -------------------------------
--- --     → ⌊ ⌈ M ⌉ ⌋ =⇒ N
-
--- --   ξ-λ̇
--- --     : M =⇒ M′
--- --       -----------
--- --     → λ̇ M =⇒ λ̇ M′
-
--- --   ξ-·
--- --     : M =⇒ M′
--- --     → N =⇒ N′
--- --       ----------------
--- --     → M · N =⇒ M′ · N′
-
--- --   ξ-⌊⌋
--- --     : M =⇒ M′
--- --       -----------------------
--- --     → ⌊_⌋ {Γ = Γ} M =⇒ ⌊ M′ ⌋
-
--- --   ξ-⌈⌉subst
--- --     : {N N′ : Ψ , Γ ⊢ A}
--- --     → (M : Ψ , (Γ , A) , ∅ ⊢ B)
--- --     → N =⇒ N′
--- --     → ⌈ M ⌉ [ N ] =⇒ ⌈ M ⌉ [ N′ ]
-
--- -- ------------------------------------------------------------------------------
--- -- -- =⇒ is reflexive
--- -- =⇒-refl : {M : Ψ ⊢ A} → M =⇒ M
--- -- =⇒-refl {M = ` _}   = refl-`
--- -- =⇒-refl {M = λ̇ _}   = ξ-λ̇  =⇒-refl
--- -- =⇒-refl {M = _ · _} = ξ-·  =⇒-refl =⇒-refl
--- -- =⇒-refl {M = ⌈ _ ⌉} = refl-⌈⌉
--- -- =⇒-refl {M = ⌊ _ ⌋} = ξ-⌊⌋ =⇒-refl
-
--- -- ------------------------------------------------------------------------------
--- -- -- Sandwitch parallel reduction between single-step reduction and multi-step reduction
--- -- -- -→ ⊆ =⇒ ⊆ -↠
-
--- -- -→⊆=⇒ : M -→ N → M =⇒ N
--- -- -→⊆=⇒ β-λ̇·         = β-λ̇·   =⇒-refl =⇒-refl
--- -- -→⊆=⇒ β-⌊⌈⌉⌋       = β-⌊⌈⌉⌋ =⇒-refl 
--- -- -→⊆=⇒ (ξ-λ̇ M→M′)   = ξ-λ̇ (-→⊆=⇒ M→M′)
--- -- -→⊆=⇒ (ξ-·₁ L→L′)  = ξ-· (-→⊆=⇒ L→L′) =⇒-refl
--- -- -→⊆=⇒ (ξ-·₂ M→M′)  = ξ-· =⇒-refl     (-→⊆=⇒ M→M′)
--- -- -→⊆=⇒ (ξ-⌊⌋ Γ M→N) = ξ-⌊⌋ (-→⊆=⇒ M→N)
--- -- -→⊆=⇒ (ξ-⌈⌉subst  M N→N′) = ξ-⌈⌉subst M (-→⊆=⇒ N→N′)
-
--- -- =⇒⊆-↠ : M =⇒ N → M -↠ N
--- -- =⇒⊆-↠ refl-`  = refl-↠
--- -- =⇒⊆-↠ refl-⌈⌉ = refl-↠
--- -- =⇒⊆-↠ (β-λ̇· {M = M} {M′} {N} {N′} M=⇒M′ N=⇒N′) = begin
--- --   (λ̇ M) · N
--- --     -↠⟨ ·₁-↠ (λ̇-↠ (=⇒⊆-↠ M=⇒M′)) ⟩
--- --   (λ̇ M′) · N
--- --     -↠⟨ ·₂-↠ (=⇒⊆-↠ N=⇒N′) ⟩
--- --   (λ̇ M′) · N′
--- --     -→⟨ β-λ̇· ⟩
--- --   M′ [ N′ ] ∎
--- -- =⇒⊆-↠ (β-⌊⌈⌉⌋ {M = M} {N} M=⇒N) = begin
--- --   ⌊ ⌈ M ⌉ ⌋
--- --     -→⟨ β-⌊⌈⌉⌋ ⟩
--- --   M
--- --     -↠⟨ =⇒⊆-↠ M=⇒N ⟩
--- --   N ∎
--- -- =⇒⊆-↠ (ξ-λ̇ M=⇒N) = λ̇-↠ (=⇒⊆-↠ M=⇒N)
--- -- =⇒⊆-↠ (ξ-·
--- --  L=⇒M M=⇒N) = begin
--- --   _ · _
--- --     -↠⟨ ·₁-↠ (=⇒⊆-↠ L=⇒M) ⟩
--- --   _ · _
--- --     -↠⟨ ·₂-↠ (=⇒⊆-↠ M=⇒N) ⟩
--- --   _ · _
--- --     ∎
--- -- =⇒⊆-↠ (ξ-⌊⌋ M=⇒N)         = ⌊⌋-↠ _ (=⇒⊆-↠ M=⇒N)
--- -- =⇒⊆-↠ (ξ-⌈⌉subst M N=⇒N′) = ⌈⌉-↠ {M = M} (=⇒⊆-↠ N=⇒N′) 
-
--- -- {-
--- -- subst : (Ψ : Cxts) {Γ Δ : Cxt}
--- --   → ({A : Type} → Γ ∋ A → Ξ , Δ ⊢ A)
--- --   → Ξ , Γ ⧺ Ψ ⊢ A
--- --   → Ξ , Δ ⧺ Ψ ⊢ A
--- -- -}
--- -- {-
--- -- subst-=⇒ {Ψ = ∅} refl-` σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = ∅} refl-⌈⌉ σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = ∅} (β-λ̇· M=⇒M′ M=⇒M′₁) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = ∅} (β-⌊⌈⌉⌋ M=⇒M′) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = ∅} (ξ-λ̇ M=⇒M′) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = ∅} (ξ-· M=⇒M′ M=⇒M′₁) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = ∅} (ξ-⌊⌋ M=⇒M′) σ σ′ σ=⇒σ′ = {!!}
--- -- --subst-=⇒ {Ψ = ∅} (ξ-⌈⌉subst M M=⇒M′) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = Ψ , Γ} {` x} {.(` x)} refl-` σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = Ψ , Γ} {λ̇ M} {.(λ̇ _)} (ξ-λ̇ M=⇒M′) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = Ψ , Γ} {.(λ̇ _) · M₁} (β-λ̇· M=⇒M′ M=⇒M′₁) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = Ψ , Γ} {M · M₁}  (ξ-· M=⇒M′ M=⇒M′₁) σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = Ψ , Γ} {⌈ M ⌉} {M′} M=⇒M′ σ σ′ σ=⇒σ′ = {!!}
--- -- subst-=⇒ {Ψ = Ψ , Γ} {⌊ M ⌋} {M′} M=⇒M′ σ σ′ σ=⇒σ′ = {!!}
--- -- -}
-
--- -- subst-=⇒
--- --   : M =⇒ M′
--- --   → N =⇒ N′
--- --   → M [ N ] =⇒ M′ [ N′ ]
--- -- subst-=⇒ (refl-` {x = Z})   N=⇒N′ = N=⇒N′
--- -- subst-=⇒ (refl-` {x = S x}) N=⇒N′ = refl-`
--- -- subst-=⇒ (refl-⌈⌉ {M = M}) N=⇒N′  = {!!} -- ξ-⌈⌉subst M N=⇒N′
--- -- subst-=⇒ (β-λ̇· M=⇒M′ N=⇒N′) L=⇒L′ = {! β-λ̇· {!β-λ̇· !} (subst-=⇒ N=⇒N′ L=⇒L′) !}
--- -- subst-=⇒ (ξ-λ̇ M=⇒M′) N=⇒N′        = {!!} -- ξ-λ̇ {!subst-=⇒ M=⇒M′ N=⇒N′!} 
--- -- subst-=⇒ (ξ-· L=⇒L′ M=⇒M′) N=⇒N′  =
--- --   ξ-· (subst-=⇒ L=⇒L′ N=⇒N′) (subst-=⇒ M=⇒M′ N=⇒N′)
--- -- subst-=⇒ (ξ-⌊⌋ M=⇒M′) _            = ξ-⌊⌋ M=⇒M′
--- -- subst-=⇒ (ξ-⌈⌉subst M N=⇒N′) L=⇒L′ = {!ξ-⌈⌉subst M !} -- ξ-⌈⌉subst {!!} {!!}
--- -- ------------------------------------------------------------------------------
--- -- -- Confluency
-
--- -- _⁺ : Ψ ⊢ A → Ψ ⊢ A
--- -- (` x) ⁺       =  ` x
--- -- (λ̇ M) ⁺       = λ̇ (M ⁺)
--- -- ((λ̇ M) · N) ⁺ = M ⁺ [ N ⁺ ]
--- -- (M · N) ⁺     = M ⁺ · N ⁺
--- -- ⌈ M ⌉ ⁺       = ⌈ M ⌉ -- no reduction happens under ⌈_⌉ because of intensionality
--- -- (⌊_⌋ {Γ = ∅} ⌈ M ⌉) ⁺ = M ⁺
--- -- ⌊ M ⌋ ⁺       = ⌊ M ⁺ ⌋
-
-
--- -- -- confluency
--- -- --   : M =⇒ N → N =⇒ M ⁺
--- -- -- confluency refl-`              = refl-`
--- -- -- confluency refl-⌈⌉             = refl-⌈⌉
--- -- -- confluency (β-λ̇· M=⇒M′ N=⇒N′)  = subst-=⇒ (confluency M=⇒M′) (confluency N=⇒N′)
--- -- -- confluency (β-⌊⌈⌉⌋ M=⇒N)       = confluency M=⇒N
--- -- -- confluency (ξ-λ̇ M=⇒M′)         = ξ-λ̇ (confluency M=⇒M′)
--- -- -- confluency (ξ-· {M = M} _ N)   = {!!}
--- -- -- confluency (ξ-⌊⌋ M)            = {!!}
--- -- -- confluency (ξ-⌈⌉subst M N=⇒N′) = {!!}
-
+------------------------------------------------------------------------------
+-- -↠ is a congruence (tedious, any better way?)
+ƛ-↠ : Δ ︔ Γ , A ⊢ M -↠ M′
+  → Δ ︔ Γ ⊢ ƛ M -↠ ƛ M′ 
+ƛ-↠ (M ∎)              = ƛ M ∎
+ƛ-↠ (M -→⟨ M→M′ ⟩ M→N) = ƛ M -→⟨ ξ-ƛ M→M′ ⟩ ƛ-↠ M→N
