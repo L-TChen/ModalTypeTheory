@@ -214,7 +214,7 @@ mwk Δ′ = mrename (σ Δ′)
 ⌜_⌝ = mfix_ ∘ m↑_ ∘ wk₁
 
 K : Δ ︔ Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-K {Δ} {Γ} {A} {B} = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ # 1 · # 0 ⌝)
+K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ # 1 · # 0 ⌝)
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
@@ -263,10 +263,6 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
     : _ ︔ _ ⊢ M -→ M′
     → _ ︔ _ ⊢ mlet N M -→ mlet N M′
 
-  ξ-mfix
-    : Δ ︔ Δ , □ A ⊢ M -→ M′
-    → Δ ︔ Γ       ⊢ mfix M -→ mfix M′
-    
   δ-proj₁-mlet
     : Δ ︔ Γ ⊢ proj₁ (mlet N M) -→ mlet N (proj₁ M)
 
