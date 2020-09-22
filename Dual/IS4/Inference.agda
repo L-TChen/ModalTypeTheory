@@ -71,6 +71,29 @@ data _∋_⦂_ : Cxt → Id → Type → Set where
       -----------------
     → Γ , y ⦂ B ∋ x ⦂ A
 
+------------------------------------------------------------------------------
+-- Variable lookup
+
+ext∋
+  : x ≢ y
+  → ¬ ∃[ A ]( Γ ∋ x ⦂ A )
+    -----------------------------
+  → ¬ ∃[ A ]( Γ , y ⦂ B ∋ x ⦂ A )
+ext∋ x≢ _  (A , Z)        = x≢ refl
+ext∋ x≢ ¬∃ (A , S x≢y ∋x) = ¬∃ (A , ∋x)
+
+lookup : (Γ : Cxt) (x : Id)
+     -----------------------
+  → Dec (∃[ A ](Γ ∋ x ⦂ A))
+lookup ∅           x = no λ ()
+lookup (Γ , y ⦂ B) x with x ≟ y
+... | yes refl = yes (B , Z)
+... | no x≢y   with lookup Γ x
+...     | no ¬∃        = no (ext∋ x≢y ¬∃)
+...     | yes (A , ∋x) = yes (A , S x≢y ∋x)
+
+------------------------------------------------------------------------------
+-- Bidirectional typing
 
 data _︔_⊢_⇒_ : (Δ Γ : Cxt) → Term⁺ → Type → Set
 data _︔_⊢_⇐_ : (Δ Γ : Cxt) → Term⁻ → Type → Set
@@ -131,10 +154,41 @@ data _︔_⊢_⇐_ where
     → A ≡ B
       -------------
     → Δ ︔ Γ ⊢ (M ⇒) ⇐ B
+    
+------------------------------------------------------------------------------
+-- Erasure 
+
+∥_∥Cx : Cxt → DB.Cxt
+∥ ∅ ∥Cx              =  DB.∅
+∥ Γ , x ⦂ A ∥Cx      =  ∥ Γ ∥Cx , A
+
+∥_∥∋ : Γ ∋ x ⦂ A
+  → ∥ Γ ∥Cx DB.∋ A
+∥ Z       ∥∋         =  DB.Z
+∥ S x≢ ∋x ∥∋         =  DB.S ∥ ∋x ∥∋
+
+∥_∥⁺ : ∀ {M}
+  → Δ          ︔ Γ       ⊢ M ⇒ A
+  → ∥ Δ ∥Cx DB.︔ ∥ Γ ∥Cx ⊢ A
+∥_∥⁻ : ∀ {M}
+  → Δ ︔ Γ ⊢ M ⇐ A
+  → ∥ Δ ∥Cx DB.︔ ∥ Γ ∥Cx ⊢ A 
+
+∥ ⊢` x ∥⁺       = ` ∥ x ∥∋
+∥ ⊢ᵒ x ∥⁺       = ᵒ ∥ x ∥∋
+∥ M · N ∥⁺      = ∥ M ∥⁺ · ∥ N ∥⁻ 
+∥ ⊢proj₁ M ∥⁺   = proj₁ ∥ M ∥⁺
+∥ ⊢proj₂ M ∥⁺   = proj₂ ∥ M ∥⁺
+∥ ⊢mlet N M ∥⁺  = mlet ∥ N ∥⁺ ∥ M ∥⁺
+∥ ⊢⇐ M ∥⁺       = ∥ M ∥⁻
+∥ ⊢ƛ M ∥⁻       = DB.ƛ ∥ M ∥⁻
+∥ ⊢⟨⟩ ∥⁻        = ⟨⟩
+∥ ⟨ M , N ⟩ ∥⁻  = ⟨ ∥ M ∥⁻ , ∥ N ∥⁻ ⟩
+∥ ⌜ M ⌝ ∥⁻      = ⌜ ∥ M ∥⁻ ⌝
+∥ ⊢⇒ M refl ∥⁻  = ∥ M ∥⁺
 
 ------------------------------------------------------------------------------
--- Uniqueness of typing
-
+-- Uniqueness of synthesised type
 
 uniq-∋ : Γ ∋ x ⦂ A → Γ ∋ x ⦂ B → A ≡ B
 uniq-∋ Z         y         =  uniq-∋-head y refl
@@ -157,6 +211,9 @@ uniq-⇒ (⊢proj₁ ⊢M)  (⊢proj₁ ⊢N)   = ×ₗ≡ (uniq-⇒ ⊢M ⊢N)
 uniq-⇒ (⊢proj₂ ⊢M)  (⊢proj₂ ⊢N)   = ×ᵣ≡ (uniq-⇒ ⊢M ⊢N)
 uniq-⇒ (⊢mlet ⊢N ⊢M) (⊢mlet ⊢N′ ⊢M′) rewrite □≡ (uniq-⇒ ⊢N ⊢N′) = uniq-⇒ ⊢M ⊢M′
 
+------------------------------------------------------------------------------
+-- Infectious failure
+
 ¬arg : ∀ {Δ L M}
   → Δ ︔ Γ ⊢ L ⇒ A →̇ B
   → ¬ (Δ ︔ Γ ⊢ M ⇐ A)
@@ -170,26 +227,6 @@ uniq-⇒ (⊢mlet ⊢N ⊢M) (⊢mlet ⊢N′ ⊢M′) rewrite □≡ (uniq-⇒ 
     --------------------
   → ¬ (Δ ︔ Γ ⊢ (M ⇒) ⇐ B)
 ¬switch ⊢M A≢B (⊢⇒ ⊢M′ A′≡B) rewrite uniq-⇒ ⊢M ⊢M′ = A≢B A′≡B
-------------------------------------------------------------------------------
--- Variable lookup
-
-ext∋
-  : x ≢ y
-  → ¬ ∃[ A ]( Γ ∋ x ⦂ A )
-    -----------------------------
-  → ¬ ∃[ A ]( Γ , y ⦂ B ∋ x ⦂ A )
-ext∋ x≢ _  (A , Z)        = x≢ refl
-ext∋ x≢ ¬∃ (A , S x≢y ∋x) = ¬∃ (A , ∋x)
-
-lookup : (Γ : Cxt) (x : Id)
-     -----------------------
-  → Dec (∃[ A ](Γ ∋ x ⦂ A))
-lookup ∅           x = no λ ()
-lookup (Γ , y ⦂ B) x with x ≟ y
-... | yes refl = yes (B , Z)
-... | no x≢y   with lookup Γ x
-...     | no ¬∃        = no (ext∋ x≢y ¬∃)
-...     | yes (A , ∋x) = yes (A , S x≢y ∋x)
 
 ------------------------------------------------------------------------------
 -- Synthesize and inherit types
@@ -264,35 +301,3 @@ inherit Δ Γ (M ⇒) B       with synthesize Δ Γ M
 ... | yes (A , ⊢M) with A ≟Tp B
 ...   | no  A≢B             =  no  (¬switch ⊢M A≢B)
 ...   | yes A≡B             =  yes (⊢⇒ ⊢M A≡B)
-
-------------------------------------------------------------------------------
--- Erasure 
-
-∥_∥Cx : Cxt → DB.Cxt
-∥ ∅ ∥Cx              =  DB.∅
-∥ Γ , x ⦂ A ∥Cx      =  ∥ Γ ∥Cx , A
-
-∥_∥∋ : Γ ∋ x ⦂ A
-  → ∥ Γ ∥Cx DB.∋ A
-∥ Z       ∥∋         =  DB.Z
-∥ S x≢ ∋x ∥∋         =  DB.S ∥ ∋x ∥∋
-
-∥_∥⁺ : ∀ {M}
-  → Δ          ︔ Γ       ⊢ M ⇒ A
-  → ∥ Δ ∥Cx DB.︔ ∥ Γ ∥Cx ⊢ A
-∥_∥⁻ : ∀ {M}
-  → Δ ︔ Γ ⊢ M ⇐ A
-  → ∥ Δ ∥Cx DB.︔ ∥ Γ ∥Cx ⊢ A 
-
-∥ ⊢` x ∥⁺       = ` ∥ x ∥∋
-∥ ⊢ᵒ x ∥⁺       = ᵒ ∥ x ∥∋
-∥ M · N ∥⁺      = ∥ M ∥⁺ · ∥ N ∥⁻ 
-∥ ⊢proj₁ M ∥⁺   = proj₁ ∥ M ∥⁺
-∥ ⊢proj₂ M ∥⁺   = proj₂ ∥ M ∥⁺
-∥ ⊢mlet N M ∥⁺  = mlet ∥ N ∥⁺ ∥ M ∥⁺
-∥ ⊢⇐ M ∥⁺       = ∥ M ∥⁻
-∥ ⊢ƛ M ∥⁻       = DB.ƛ ∥ M ∥⁻
-∥ ⊢⟨⟩ ∥⁻        = ⟨⟩
-∥ ⟨ M , N ⟩ ∥⁻  = ⟨ ∥ M ∥⁻ , ∥ N ∥⁻ ⟩
-∥ ⌜ M ⌝ ∥⁻      = ⌜ ∥ M ∥⁻ ⌝
-∥ ⊢⇒ M refl ∥⁻  = ∥ M ∥⁺
