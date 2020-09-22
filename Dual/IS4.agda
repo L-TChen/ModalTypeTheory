@@ -116,13 +116,13 @@ rename ρ ⌜ M ⌝      = ⌜ M ⌝
 rename ρ (mlet L M) = mlet (rename ρ L) (rename ρ M)
 
 wk
-  : (Δ ︔ Γ     ⊢ A)
-  → (Δ ︔ Γ , B ⊢ A)
+  : Δ ︔ Γ     ⊢ A
+  → Δ ︔ Γ , B ⊢ A
 wk = rename S_ 
 
 ↑_
-  : (Δ ︔ ∅ ⊢ A)
-  → (Δ ︔ Γ ⊢ A)
+  : Δ ︔ ∅ ⊢ A
+  → Δ ︔ Γ ⊢ A
 ↑_ = rename (λ ())
 
 mrename : Rename Δ Δ′

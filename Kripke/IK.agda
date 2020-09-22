@@ -115,7 +115,7 @@ data Subst : Cxts → Cxts → Set where
   _,_ : Subst Ψ Ξ → ({A : Type} → Γ ∋ A → Ξ , Δ ⊢ A) → Subst (Ψ , Γ) (Ξ , Δ)
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
-  → Γ , B ∋ A
+  → Γ , B       ∋ A
   → Ψ , (Δ , B) ⊢ A
 exts σ Z     = ` Z
 exts σ (S p) = rename (ids , S_) (σ p)

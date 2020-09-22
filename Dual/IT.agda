@@ -221,11 +221,7 @@ msubst : Subst ∅ Δ Δ′
   → Δ  ︔ Γ ⊢ A
   → Δ′ ︔ Γ ⊢ A
 msubst σ (` x)      = ` x
-msubst σ (ᵒ x)      = ↑ mrename ρ (dereliction _ (σ x))
-  where
-    ρ : ∀ {Γ} → ∅ ⧺ Γ ∋ A → Γ ∋ A
-    ρ {Γ = Γ , B} Z     = Z
-    ρ {Γ = Γ , B} (S x) = S (ρ x)
+msubst σ (ᵒ x)      = ↑ mrename ∅⧺∋A  (dereliction _ (σ x))
 msubst σ (ƛ M)      = ƛ msubst σ M
 msubst σ (M · N)    = msubst σ M · msubst σ N
 msubst σ ⟨⟩         = ⟨⟩

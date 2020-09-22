@@ -12,9 +12,8 @@ open import Relation.Binary.PropositionalEquality as P using (_≡_)
 
 open import Type public
 
-infix  4 _∋_
-infixl 5 _⧺_
-infixl 6 _,_
+infix  3 _∋_
+infixl 4  _,_ _⧺_
 
 data Context (Ty : Set) : Set
 
@@ -52,9 +51,9 @@ map f (Γ , A) = map f Γ , f A
 -- Membership
 
 data _∋_ {Ty : Set} : Context Ty → Ty → Set where
-  Z  : Γ , A ∋ A
+  Z  : (Γ , A) ∋ A
   S_ : Γ     ∋ A
-     → Γ , B ∋ A
+     → (Γ , B) ∋ A
 
 lookup : Context Ty → ℕ → Ty
 lookup (Γ , A) zero     =  A
@@ -70,7 +69,7 @@ count {Γ = ∅}     _        =  ⊥-elim impossible
 
 ext
   : (∀ {A : Ty} →       Γ ∋ A →     Δ ∋ A)
-    ---------------------------------
+    ------------------------------------------
   → (∀ {A B : Ty} → Γ , B ∋ A → Δ , B ∋ A)
 ext ρ Z      =  Z
 ext ρ (S x)  =  S (ρ x)
@@ -78,27 +77,31 @@ ext ρ (S x)  =  S (ρ x)
 ------------------------------------------------------------------------------
 -- Properties of ⧺
 
-⧺-identityˡ : (Γ : Context Ty) → ∅ ⧺ Γ ≡ Γ
+⧺-identityˡ : ∀ (Γ : Context Ty) → (∅ ⧺ Γ) ≡ Γ
 ⧺-identityˡ ∅       = P.refl
 ⧺-identityˡ (Γ , A) = P.cong (_, A) (⧺-identityˡ Γ)
 
-⧺-∋ : ∀ Δ → Γ ⧺ Δ ∋ A → Γ ∋ A ⊎ Δ ∋ A
+⧺-∋ : ∀ Δ → (Γ ⧺ Δ) ∋ A → Γ ∋ A ⊎ Δ ∋ A
 ⧺-∋ ∅       x     = inj₁ x
 ⧺-∋ (Δ , A) Z     = inj₂ Z
 ⧺-∋ (Δ , A) (S x) with ⧺-∋ Δ x
 ... | inj₁ Γ∋A = inj₁ Γ∋A
 ... | inj₂ Δ∋A = inj₂ (S Δ∋A)
 
-∋-⧺⁺ˡ : Γ ∋ A → Γ ⧺ Δ ∋ A
+∋-⧺⁺ˡ : Γ ∋ A → (Γ ⧺ Δ) ∋ A
 ∋-⧺⁺ˡ {Δ = ∅}     x = x
 ∋-⧺⁺ˡ {Δ = Δ , B} x = S (∋-⧺⁺ˡ x)
 
-∋-⧺⁺ʳ : ∀ Γ → Δ ∋ A → Γ ⧺ Δ ∋ A
+∋-⧺⁺ʳ : ∀ Γ → Δ ∋ A → (Γ ⧺ Δ) ∋ A
 ∋-⧺⁺ʳ Γ Z     = Z
 ∋-⧺⁺ʳ Γ (S x) = S ∋-⧺⁺ʳ Γ x
 
+∅⧺∋A : ∀ {Γ} → ∅ ⧺ Γ ∋ A → Γ ∋ A
+∅⧺∋A = P.subst (λ Γ → Γ ∋ _) (⧺-identityˡ _)
+
+------------------------------------------------------------------------------
 -- Properties of map
 
-∋-map⁺ : ∀ {X Y} {Γ : Context X} {A : X} → (f : X → Y) → Γ ∋ A → map f Γ ∋ f A
+∋-map⁺ : ∀ {X Y Γ} {A : X} → (f : X → Y) → Γ ∋ A → map f Γ ∋ f A
 ∋-map⁺ f Z = Z
 ∋-map⁺ f (S x) = S ∋-map⁺ f x
