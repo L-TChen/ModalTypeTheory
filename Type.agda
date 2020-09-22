@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 module Type where
 
 data Type : Set where

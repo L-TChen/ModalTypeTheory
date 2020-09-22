@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 module Translation.IK where
 
 open import Data.Sum hiding (map)

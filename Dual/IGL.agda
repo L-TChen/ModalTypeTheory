@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Dual-context modal type theory (GL)
 
 module Dual.IGL where

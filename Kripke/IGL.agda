@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Kripke-style intuitionistic GL
 
 module Kripke.IGL where

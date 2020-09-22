@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Kripke-style modal type theory (K) with naturals 
 
 module Kripke.IKnat where
@@ -9,20 +11,17 @@ open import Relation.Binary.PropositionalEquality as PropEq
 
 open import Type
 open import Context
+  hiding ([_])
 
 infix  3 _⊢_
 
 infixr 5 ƛ_
 infix  6 ⟨_,_⟩
-infixr 6 proj₁_
-infixr 6 proj₂_
+infixr 6 proj₁_ proj₂_
 infixl 7 _·_
 infixl 8 _[_]
-infix  9 `_
-infix  9 #_
+infix  9 `_ #_
 
-Cxt  = Context Type
-Cxts = Context Cxt
 data _⊢_ : Cxts → Type → Set
 
 private

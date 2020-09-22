@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Dual-context modal type theory (T)
 
 module Dual.IT where

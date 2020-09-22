@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Kripke-style modal type theory (T)
 
 module Kripke.IT where

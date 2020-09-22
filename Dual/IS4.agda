@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Dual-context modal type theory (IS4)
 
 module Dual.IS4 where

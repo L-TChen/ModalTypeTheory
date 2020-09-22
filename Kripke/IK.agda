@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 -- Kripke-style modal type theory (K)
 
 module Kripke.IK where
