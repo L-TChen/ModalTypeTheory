@@ -38,18 +38,20 @@ _⧺_ : Context Ty → Context Ty → Context Ty
 Γ ⧺ ∅       = Γ
 Γ ⧺ (Δ , A) = (Γ ⧺ Δ) , A
 
+replicate : ℕ → Ty → Context Ty
+replicate zero    A = ∅
+replicate (suc n) A = replicate n A , A
+
 map : ∀ {X Y} → (X → Y) → Context X → Context Y
-map f ∅ = ∅
+map f ∅       = ∅
 map f (Γ , A) = map f Γ , f A
 
 ------------------------------------------------------------------------------
 -- Membership
 
 data _∋_ {Ty : Set} : Context Ty → Ty → Set where
-  Z  : {Γ : Context Ty} {A : Ty}
-     → Γ , A ∋ A
-  S_ : {Γ : Context Ty} {A B : Ty}
-     → Γ     ∋ A
+  Z  : Γ , A ∋ A
+  S_ : Γ     ∋ A
      → Γ , B ∋ A
 
 lookup : Context Ty → ℕ → Ty
@@ -75,7 +77,7 @@ ext ρ (S x)  =  S (ρ x)
 -- Properties of ⧺
 
 ⧺-identityˡ : (Γ : Context Ty) → ∅ ⧺ Γ ≡ Γ
-⧺-identityˡ ∅ = P.refl
+⧺-identityˡ ∅       = P.refl
 ⧺-identityˡ (Γ , A) = P.cong (_, A) (⧺-identityˡ Γ)
 
 ⧺-∋ : ∀ Δ → Γ ⧺ Δ ∋ A → Γ ∋ A ⊎ Δ ∋ A

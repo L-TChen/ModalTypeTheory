@@ -222,9 +222,11 @@ _-↠⟨_⟩_
 M -↠⟨ refl-↠ ⟩ M-↠N             = M-↠N
 L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -↠⟨ M-↠N ⟩ N-↠N′)
 
+------------------------------------------------------------------------------
+-- Progress theorem
+
 ∅ₙ : ℕ → Cxts 
-∅ₙ zero    = ∅
-∅ₙ (suc n) = ∅ₙ n , ∅
+∅ₙ n = replicate n ∅
 
 data Value {n : ℕ} : ∅ₙ (suc n) ⊢ A → Set where
   V-ƛ
