@@ -5,9 +5,6 @@
 module Kripke.IK where
 
 open import Data.Nat
-open import Relation.Binary.PropositionalEquality as PropEq
-  using (_≡_; refl)
-
 open import Context hiding ([_])
 
 infix  3 _⊢_

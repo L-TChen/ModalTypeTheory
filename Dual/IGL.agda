@@ -6,8 +6,6 @@ module Dual.IGL where
 
 open import Data.Sum
 open import Data.Nat
-open import Relation.Binary.PropositionalEquality as PropEq
-  using (_≡_; refl)
 open import Function
   hiding (_∋_)
 

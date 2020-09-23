@@ -9,9 +9,6 @@ open import Function
 open import Data.Nat
 open import Data.Sum
 
-open import Relation.Binary.PropositionalEquality as PropEq
-  using (_≡_; refl)
-
 open import Context   public
   hiding ([_])
 

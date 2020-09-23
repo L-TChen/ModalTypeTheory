@@ -2,9 +2,8 @@
 
 module Dual.IGL.Inference where
 
-import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; sym; trans; cong; cong₂; _≢_)
-
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; refl; _≢_)
 open import Data.Product
   using (_,_; ∃-syntax)
 open import Relation.Nullary
