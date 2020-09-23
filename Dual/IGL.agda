@@ -172,7 +172,7 @@ msubst                  σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
 msubst                  σ (proj₁ M)  = proj₁ msubst σ M
 msubst                  σ (proj₂ M)  = proj₂ msubst σ M
 msubst                  σ (mlet L M) = mlet (msubst σ L)  (msubst (mexts σ) M)
-msubst {Δ} {Δ′} {Γ} {A} σ (mfix M)   = mfix ( subst (exts mσ) (msubst (wk₁ ∘ mσ) M) )
+msubst {Δ} {Δ′} {Γ} {A} σ (mfix M)   = mfix (subst (exts mσ) (msubst (wk₁ ∘ mσ) M))
   where 
     mσ : ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ ⊢ A
     mσ x = (σ x [ mfix (σ x) ])

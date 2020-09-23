@@ -10,7 +10,7 @@ open import Relation.Nullary
   using (¬_; Dec; yes; no)
 
 open import Dual.IGL as DB
-  hiding (Cxt; _︔_⊢_; ƛ_; lookup)
+  hiding (Cxt; _︔_⊢_; ƛ_; mfix_; lookup)
 open import DisjointContext 
 
 infix   3  _︔_⊢_⇒_
@@ -71,8 +71,8 @@ data _︔_⊢_⇒_ where
     → Δ ︔ Γ ⊢ proj₂ M ⇒ B
 
   ⊢mlet : ∀ {N M}
-    → Δ         ︔ Γ ⊢ N ⇒ □ A
-    → Δ , x ⦂ A ︔ Γ ⊢ M ⇒ B
+    → Δ         ︔ Γ ⊢ N                ⇒ □ A
+    → Δ , x ⦂ A ︔ Γ ⊢ M                ⇒ B
     → Δ         ︔ Γ ⊢ mlet x ≔ N `in M ⇒ B
 
   ⊢⇐ : ∀ {M}
@@ -82,7 +82,7 @@ data _︔_⊢_⇒_ where
 
 data _︔_⊢_⇐_ where
   ⊢ƛ : ∀ {N}
-    → Δ ︔ Γ , x ⦂ A ⊢ N ⇐ B
+    → Δ ︔ Γ , x ⦂ A ⊢ N       ⇐ B
       ------------------------------
     → Δ ︔ Γ         ⊢ ƛ x ⇒ N ⇐ A →̇ B
 
@@ -95,7 +95,7 @@ data _︔_⊢_⇐_ where
 
   ⊢mfix : ∀ {M}
     → Δ ︔ Δ , x ⦂ □ A ⊢ M            ⇐ A
-    → Δ ︔ Γ           ⊢ (mfix x ⇒ M) ⇐ □ A
+    → Δ ︔ Γ           ⊢  mfix x ⇒ M  ⇐ □ A
 
   ⊢⇒ : ∀ {M}
     → Δ ︔ Γ ⊢ M ⇒ A
@@ -125,9 +125,9 @@ data _︔_⊢_⇐_ where
 
 ∥ ⊢` x      ∥⁺  = ` ∥ x ∥∋
 ∥ M · N     ∥⁺  = ∥ M ∥⁺ · ∥ N ∥⁻ 
-∥ ⊢proj₁ M  ∥⁺  = proj₁ ∥ M ∥⁺
-∥ ⊢proj₂ M  ∥⁺  = proj₂ ∥ M ∥⁺
-∥ ⊢mlet N M ∥⁺  = mlet ∥ N ∥⁺ ∥ M ∥⁺
+∥ ⊢proj₁ M  ∥⁺  = DB.proj₁ ∥ M ∥⁺
+∥ ⊢proj₂ M  ∥⁺  = DB.proj₂ ∥ M ∥⁺
+∥ ⊢mlet N M ∥⁺  = DB.mlet ∥ N ∥⁺ ∥ M ∥⁺
 ∥ ⊢⇐ M      ∥⁺  = ∥ M ∥⁻
 ∥ ⊢ƛ M      ∥⁻  = DB.ƛ ∥ M ∥⁻
 ∥ ⊢⟨⟩       ∥⁻  = ⟨⟩
@@ -249,3 +249,4 @@ inherit Δ Γ (M ⇒) B       with synthesize Δ Γ M
 ... | yes (A , ⊢M) with A ≟Tp B
 ...   | no  A≢B             =  no  (¬switch ⊢M A≢B)
 ...   | yes A≡B             =  yes (⊢⇒ ⊢M A≡B)
+
