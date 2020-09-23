@@ -3,37 +3,23 @@
 module Dual.IS4.Inference where
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; sym; trans; cong; cong₂; _≢_)
+open Eq using (_≡_; refl; _≢_)
 
-open import Data.Empty
-  using (⊥; ⊥-elim)
-open import Data.Nat
-  using (ℕ; zero; suc; _+_; _*_)
-open import Data.String
-  using (String; _≟_)
 open import Data.Product
-  using (Σ; _×_; _,_; ∃; ∃-syntax)
+  using (_,_; ∃-syntax)
 open import Relation.Nullary
-  using (¬_; Dec; yes; no; _because_; ofʸ; ofⁿ)
+  using (¬_; Dec; yes; no)
 
 open import Dual.IS4 as DB
-  hiding (Cxt; _︔_⊢_; ƛ_; lookup; _,_; S_)
-open Context
-open Type
+  hiding (Cxt; _︔_⊢_; ƛ_; lookup)
+open import DisjointContext
 
 infix   3  _︔_⊢_⇒_
 infix   3  _︔_⊢_⇐_
-infix   3  _∋_⦂_
-infixl  4  _,_⦂_
 
 infix   5  ƛ_⇒_ mlet_≔_`in_ _⇒ _⇐_
 infixl  7  _·_
 infix   9  `_ ᵒ_
-
-Id : Set
-Id = String
-
-Cxt = Context (Id × Type)
 
 private
   variable
@@ -45,7 +31,7 @@ data Term⁺ : Set
 data Term⁻ : Set
 
 data Term⁺ where
-  `_                        : Id → Term⁺
+  `_                       : Id → Term⁺
   ᵒ_                       : Id → Term⁺
   _·_                      : Term⁺ → Term⁻ → Term⁺
   proj₁_                   : Term⁺ → Term⁺
@@ -59,41 +45,6 @@ data Term⁻ where
   ⟨_,_⟩                    : Term⁻ → Term⁻ → Term⁻
   ⌜_⌝                      : Term⁻ → Term⁻
   _⇒                       : Term⁺ → Term⁻
-
-
-------------------------------------------------------------------------------
--- Mutually exclusive (snoc) list
-
-pattern _,_⦂_ Γ x A = Γ , (x , A)
-
-data _∋_⦂_ : Cxt → Id → Type → Set where
-  Z : Γ , x ⦂ A ∋ x ⦂ A
-
-  S : x ≢ y
-    → Γ ∋ x ⦂ A
-      -----------------
-    → Γ , y ⦂ B ∋ x ⦂ A
-
-------------------------------------------------------------------------------
--- Variable lookup
-
-ext∋
-  : x ≢ y
-  → ¬ ∃[ A ]( Γ ∋ x ⦂ A )
-    -----------------------------
-  → ¬ ∃[ A ]( Γ , y ⦂ B ∋ x ⦂ A )
-ext∋ x≢ _  (A , Z)        = x≢ refl
-ext∋ x≢ ¬∃ (A , S x≢y ∋x) = ¬∃ (A , ∋x)
-
-lookup : (Γ : Cxt) (x : Id)
-     -----------------------
-  → Dec (∃[ A ](Γ ∋ x ⦂ A))
-lookup ∅           x = no λ ()
-lookup (Γ , y ⦂ B) x with x ≟ y
-... | yes refl = yes (B , Z)
-... | no x≢y   with lookup Γ x
-...     | no ¬∃        = no (ext∋ x≢y ¬∃)
-...     | yes (A , ∋x) = yes (A , S x≢y ∋x)
 
 ------------------------------------------------------------------------------
 -- Bidirectional typing
@@ -132,9 +83,9 @@ data _︔_⊢_⇒_ where
     → Δ         ︔ Γ ⊢ mlet x ≔ N `in M ⇒ B
 
   ⊢⇐ : ∀ {M}
-    → Δ ︔ Γ ⊢ M ⇐ A
+    → Δ ︔ Γ ⊢ M     ⇐ A
       ------------------
-    → Δ ︔ Γ ⊢ (M ⇐ A) ⇒ A
+    → Δ ︔ Γ ⊢ M ⇐ A ⇒ A
 
 data _︔_⊢_⇐_ where
   ⊢ƛ : ∀ {N}
@@ -163,7 +114,7 @@ data _︔_⊢_⇐_ where
 
 ∥_∥Cxt : Cxt → DB.Cxt
 ∥ ∅         ∥Cxt =  DB.∅
-∥ Γ , x ⦂ A ∥Cxt =  ∥ Γ ∥Cxt , A
+∥ Γ , x ⦂ A ∥Cxt =  ∥ Γ ∥Cxt DB., A
 
 ∥_∥∋
   : Γ ∋ x ⦂ A
@@ -193,15 +144,6 @@ data _︔_⊢_⇐_ where
 
 ------------------------------------------------------------------------------
 -- Uniqueness of synthesised type
-
-uniq-∋ : Γ ∋ x ⦂ A → Γ ∋ x ⦂ B → A ≡ B
-uniq-∋ Z         y         =  uniq-∋-head y refl
-  where
-    uniq-∋-head : ∀ {x y} → Γ , x ⦂ A ∋ y ⦂ B → x ≡ y → A ≡ B
-    uniq-∋-head Z          = λ _ → refl
-    uniq-∋-head (S y≢x ∋y) = λ x≡y → ⊥-elim (y≢x (Eq.sym x≡y))
-uniq-∋ (S x≢y _) Z         = ⊥-elim (x≢y refl)
-uniq-∋ (S _ ∋x)  (S _ ∋y)  = uniq-∋ ∋x ∋y
 
 uniq-⇒ : ∀ {M}
   → Δ ︔ Γ ⊢ M ⇒ A

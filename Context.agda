@@ -15,17 +15,15 @@ open import Type public
 infix  3 _∋_
 infixl 4  _,_ _⧺_
 
-data Context (Ty : Set) : Set
-
+data Context (Ty : Set) : Set where
+  ∅   : Context Ty
+  _,_ : (Γ : Context Ty) → (T : Ty) → Context Ty
+  
 private
   variable
     Ty  : Set
     Γ Δ : Context Ty
     A B : Ty
-
-data Context Ty where
-  ∅   : Context Ty
-  _,_ : (Γ : Context Ty) → (T : Ty) → Context Ty
 
 Cxt  = Context Type
 Cxts = Context Cxt

@@ -11,12 +11,10 @@ open import Relation.Binary.PropositionalEquality as PropEq
 open import Function
   hiding (_∋_)
 
-open import Context
+open import Context public
   hiding ([_])
 
 infix  3 _︔_⊢_
-
-infixr 8 ¬̇_ 
 
 infixr 5 ƛ_
 infix  6 ⟨_,_⟩
@@ -29,7 +27,6 @@ data _︔_⊢_ : Cxt → Cxt → Type → Set
 
 private
   variable
-    n m l          : ℕ
     Γ Δ Γ′ Δ′      : Cxt
     A B            : Type
     M N L M′ N′ L′ : Δ ︔ Γ ⊢ A
@@ -70,8 +67,8 @@ data _︔_⊢_ where
       → Δ ︔ Γ ⊢ B
 
   mfix_ : Δ ︔ Δ , □ A ⊢ A
-       --------------
-       → Δ ︔ Γ ⊢ □ A
+       --------------------
+       → Δ ︔ Γ        ⊢ □ A
 
 #_ : (n : ℕ) → Δ ︔ Γ ⊢ lookup Γ n
 # n  =  ` count n
