@@ -61,6 +61,9 @@ data Term⁻ where
   _⇒                       : Term⁺ → Term⁻
 
 
+------------------------------------------------------------------------------
+-- Mutually exclusive (snoc) list
+
 pattern _,_⦂_ Γ x A = Γ , (x , A)
 
 data _∋_⦂_ : Cxt → Id → Type → Set where
@@ -158,33 +161,34 @@ data _︔_⊢_⇐_ where
 ------------------------------------------------------------------------------
 -- Erasure 
 
-∥_∥Cx : Cxt → DB.Cxt
-∥ ∅ ∥Cx              =  DB.∅
-∥ Γ , x ⦂ A ∥Cx      =  ∥ Γ ∥Cx , A
+∥_∥Cxt : Cxt → DB.Cxt
+∥ ∅         ∥Cxt =  DB.∅
+∥ Γ , x ⦂ A ∥Cxt =  ∥ Γ ∥Cxt , A
 
-∥_∥∋ : Γ ∋ x ⦂ A
-  → ∥ Γ ∥Cx DB.∋ A
-∥ Z       ∥∋         =  DB.Z
-∥ S x≢ ∋x ∥∋         =  DB.S ∥ ∋x ∥∋
+∥_∥∋
+  : Γ ∋ x ⦂ A
+  → ∥ Γ ∥Cxt DB.∋ A
+∥ Z       ∥∋    =  DB.Z
+∥ S x≢ ∋x ∥∋    =  DB.S ∥ ∋x ∥∋
 
 ∥_∥⁺ : ∀ {M}
-  → Δ          ︔ Γ       ⊢ M ⇒ A
-  → ∥ Δ ∥Cx DB.︔ ∥ Γ ∥Cx ⊢ A
+  → Δ           ︔ Γ        ⊢ M ⇒ A
+  → ∥ Δ ∥Cxt DB.︔ ∥ Γ ∥Cxt ⊢ A
 ∥_∥⁻ : ∀ {M}
-  → Δ ︔ Γ ⊢ M ⇐ A
-  → ∥ Δ ∥Cx DB.︔ ∥ Γ ∥Cx ⊢ A 
+  → Δ           ︔ Γ        ⊢ M ⇐ A
+  → ∥ Δ ∥Cxt DB.︔ ∥ Γ ∥Cxt ⊢ A 
 
-∥ ⊢` x ∥⁺       = ` ∥ x ∥∋
-∥ ⊢ᵒ x ∥⁺       = ᵒ ∥ x ∥∋
-∥ M · N ∥⁺      = ∥ M ∥⁺ · ∥ N ∥⁻ 
-∥ ⊢proj₁ M ∥⁺   = proj₁ ∥ M ∥⁺
-∥ ⊢proj₂ M ∥⁺   = proj₂ ∥ M ∥⁺
+∥ ⊢` x      ∥⁺  = ` ∥ x ∥∋
+∥ ⊢ᵒ x      ∥⁺  = ᵒ ∥ x ∥∋
+∥ M · N     ∥⁺  = ∥ M ∥⁺ · ∥ N ∥⁻ 
+∥ ⊢proj₁ M  ∥⁺  = proj₁ ∥ M ∥⁺
+∥ ⊢proj₂ M  ∥⁺  = proj₂ ∥ M ∥⁺
 ∥ ⊢mlet N M ∥⁺  = mlet ∥ N ∥⁺ ∥ M ∥⁺
-∥ ⊢⇐ M ∥⁺       = ∥ M ∥⁻
-∥ ⊢ƛ M ∥⁻       = DB.ƛ ∥ M ∥⁻
-∥ ⊢⟨⟩ ∥⁻        = ⟨⟩
+∥ ⊢⇐ M      ∥⁺  = ∥ M ∥⁻
+∥ ⊢ƛ M      ∥⁻  = DB.ƛ ∥ M ∥⁻
+∥ ⊢⟨⟩       ∥⁻  = ⟨⟩
 ∥ ⟨ M , N ⟩ ∥⁻  = ⟨ ∥ M ∥⁻ , ∥ N ∥⁻ ⟩
-∥ ⌜ M ⌝ ∥⁻      = ⌜ ∥ M ∥⁻ ⌝
+∥ ⌜ M ⌝     ∥⁻  = ⌜ ∥ M ∥⁻ ⌝
 ∥ ⊢⇒ M refl ∥⁻  = ∥ M ∥⁺
 
 ------------------------------------------------------------------------------
@@ -214,12 +218,18 @@ uniq-⇒ (⊢mlet ⊢N ⊢M) (⊢mlet ⊢N′ ⊢M′) rewrite □≡ (uniq-⇒ 
 ------------------------------------------------------------------------------
 -- Infectious failure
 
-¬arg : ∀ {Δ L M}
+¬arg : ∀ {L M}
   → Δ ︔ Γ ⊢ L ⇒ A →̇ B
   → ¬ (Δ ︔ Γ ⊢ M ⇐ A)
     -------------------------
   → ¬ ∃[ B′ ](Δ ︔ Γ ⊢ L · M ⇒ B′)
 ¬arg ⊢L ¬⊢M ( B′ , ⊢L′ · ⊢M′ ) rewrite dom≡ (uniq-⇒ ⊢L ⊢L′) = ¬⊢M ⊢M′
+
+¬mbody : ∀ {N M}
+  → Δ ︔ Γ ⊢ N ⇒ □ A
+  → ¬ ∃[ B ] (Δ , x ⦂ A ︔ Γ ⊢ M ⇒ B)
+  → ¬ ∃[ B ] (Δ         ︔ Γ ⊢ mlet x ≔ N `in M ⇒ B)
+¬mbody ⊢N ¬⊢M (B′ , ⊢mlet ⊢N′ ⊢M′) rewrite □≡ (uniq-⇒ ⊢N ⊢N′) = ¬⊢M (B′  , ⊢M′)
 
 ¬switch : ∀ {M}
   → Δ ︔ Γ ⊢ M ⇒ A
@@ -240,11 +250,11 @@ inherit
     ----------------------------------
   → Dec (Δ ︔ Γ ⊢ M ⇐ A)
 synthesize Δ Γ (` x)              with lookup Γ x
-... | yes (A , ∋x) = yes (A , ⊢` ∋x)
 ... | no ¬∃        = no  λ{(A , ⊢` ∋x) → ¬∃ ( A , ∋x )}
+... | yes (A , ∋x) = yes (A , ⊢` ∋x)
 synthesize Δ Γ (ᵒ x)              with lookup Δ x
-... | yes (A , ∋x) = yes (A , ⊢ᵒ ∋x)
 ... | no ¬∃        = no  λ{(A , ⊢ᵒ ∋x) → ¬∃ ( A , ∋x )} 
+... | yes (A , ∋x) = yes (A , ⊢ᵒ ∋x)
 synthesize Δ Γ (L · M) with synthesize Δ Γ L
 ... | no  ¬∃                      =
   no λ{ (_ , ⊢L  · _) → ¬∃ (_ , ⊢L ) }
@@ -257,18 +267,25 @@ synthesize Δ Γ (L · M) with synthesize Δ Γ L
 synthesize Δ Γ (proj₁ M)          with synthesize Δ Γ M
 ... | no ¬∃ =
   no λ { (_ , ⊢proj₁ ⊢M) → ¬∃ (_ ×̇ _ , ⊢M) }
-... | yes (⊤̇     , ⊢M) = no λ {(_ , ⊢proj₁ ⊢M′) → ⊤≢×̇ (uniq-⇒ ⊢M ⊢M′)}
-... | yes (A →̇ B , ⊢M) = no λ {(_ , ⊢proj₁ ⊢M′) → ×̇≢→̇ (uniq-⇒ ⊢M′ ⊢M) }
-... | yes (□ A   , ⊢M) = no λ {(_ , ⊢proj₁ ⊢M′) → □≢×̇ (uniq-⇒ ⊢M ⊢M′) }
-... | yes (A ×̇ B , ⊢M) = yes (A , ⊢proj₁ ⊢M)
+... | yes (⊤̇     , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ⊤≢×̇ (uniq-⇒ ⊢M ⊢M′)}
+... | yes (A →̇ B , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ×̇≢→̇ (uniq-⇒ ⊢M′ ⊢M) }
+... | yes (□ A   , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → □≢×̇ (uniq-⇒ ⊢M ⊢M′) }
+... | yes (A ×̇ B , ⊢M)            = yes (A , ⊢proj₁ ⊢M)
 synthesize Δ Γ (proj₂ M)          with synthesize Δ Γ M
 ... | no ¬∃ =
   no λ { (_ , ⊢proj₂ ⊢M) → ¬∃ (_ ×̇ _ , ⊢M) }
-... | yes (⊤̇     , ⊢M) = no λ {(_ , ⊢proj₂ ⊢M′) → ⊤≢×̇ (uniq-⇒ ⊢M ⊢M′)}
-... | yes (A →̇ B , ⊢M) = no λ {(_ , ⊢proj₂ ⊢M′) → ×̇≢→̇ (uniq-⇒ ⊢M′ ⊢M) }
-... | yes (□ A   , ⊢M) = no λ {(_ , ⊢proj₂ ⊢M′) → □≢×̇ (uniq-⇒ ⊢M ⊢M′) }
-... | yes (A ×̇ B , ⊢M) = yes (B , ⊢proj₂ ⊢M)
-synthesize Δ Γ (mlet x ≔ N `in M) = {!!}
+... | yes (⊤̇     , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ⊤≢×̇ (uniq-⇒ ⊢M ⊢M′)}
+... | yes (A →̇ B , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ×̇≢→̇ (uniq-⇒ ⊢M′ ⊢M) }
+... | yes (□ A   , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → □≢×̇ (uniq-⇒ ⊢M ⊢M′) }
+... | yes (A ×̇ B , ⊢M)            = yes (B , ⊢proj₂ ⊢M)
+synthesize Δ Γ (mlet x ≔ N `in M) with synthesize Δ Γ N
+... | no ¬∃                       = no λ { (_ , ⊢mlet ⊢N _)  → ¬∃ (□ _ , ⊢N)}
+... | yes (⊤̇ , ⊢N)                = no λ { (_ , ⊢mlet ⊢N′ _) → □≢⊤̇ (uniq-⇒ ⊢N′ ⊢N)}
+... | yes (A ×̇ B , ⊢N)            = no λ { (_ , ⊢mlet ⊢N′ _) → □≢×̇ (uniq-⇒ ⊢N′ ⊢N)}
+... | yes (A →̇ B , ⊢N)            = no λ { (_ , ⊢mlet ⊢N′ _) → □≢→̇ (uniq-⇒ ⊢N′ ⊢N)}
+... | yes (□ A   , ⊢N)            with synthesize (Δ , x ⦂ A) Γ M
+...   | no ¬∃        = no (¬mbody ⊢N ¬∃)
+...   | yes (B , ⊢M) = yes (B , ⊢mlet ⊢N ⊢M)
 synthesize Δ Γ (M ⇐ A)            with inherit Δ Γ M A
 ... | no ¬⊢M = no λ { (_ , ⊢⇐ ⊢M) → ¬⊢M ⊢M }
 ... | yes ⊢M = yes (A , ⊢⇐ ⊢M)
