@@ -97,17 +97,17 @@ bind : Δ ︔ Γ ⊢ A → □Subst' Δ (Ψ , Γ) → Ψ , Γ ⊢' A
 bind {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
 bind {Δ = Δ , B} {Γ = Γ} N σ with σ Z
 ... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (λ x → ⊢'-rename (∋-⧺⁺ʳ Δ₁) (σ (S x)))
-... | Δ₂ ، M₂ ، σ₂ = Δ₂ ⧺ Δ₁ ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
+... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d : Ψ , Γ ⊢ A → Ψ , Γ ⊢' A
 k2d (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
 k2d (ƛ M) with k2d M
 ... | Δ ، M' ، σ = Δ ، ƛ M' ، σ
 k2d {Γ = Γ} (M₁ · M₂) with k2d M₁ | k2d M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = Δ₁ ⧺ Δ₂ ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ، ⧺-∋-case σ₁ σ₂
 k2d ⟨⟩ = ∅ ، ⟨⟩ ، (λ ())
 k2d {Γ = Γ} ⟨ M₁ , M₂ ⟩ with k2d M₁ | k2d M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = Δ₁ ⧺ Δ₂ ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
 k2d (proj₁ M) with k2d M
 ... |  Δ ، M' ، σ = Δ ، proj₁ M' ، σ
 k2d (proj₂ M) with k2d M
