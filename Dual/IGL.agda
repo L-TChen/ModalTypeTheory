@@ -64,7 +64,7 @@ data _︔_⊢_ where
         ---------
       → Δ ︔ Γ ⊢ B
 
-  mfix : Δ ︔ Δ , □ A ⊢ A
+  mfix_ : Δ ︔ Δ , □ A ⊢ A
        --------------------
        → Δ ︔ Γ        ⊢ □ A
 
@@ -206,7 +206,7 @@ mwk Δ′ = mrename (σ Δ′)
 
 ⌜_⌝ : ∅ ︔ Δ ⊢ A
   → Δ ︔ Γ ⊢ □ A
-⌜_⌝ = mfix ∘ m↑_ ∘ wk₁
+⌜_⌝ = mfix_ ∘ m↑_ ∘ wk₁
 
 K : Δ ︔ Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
 K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ # 1 · # 0 ⌝)
@@ -309,7 +309,7 @@ data Value : (M : ∅ ︔ ∅ ⊢ A) → Set where
       -------------------
     → Value (ƛ N)
 
-  mfix
+  mfix_
     : (M : _ ︔ _ ⊢ A)
     → Value (mfix M)
 
