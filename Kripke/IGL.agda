@@ -11,6 +11,8 @@ open import Function
 open import Context
   hiding ([_])
 
+open import Relation.Binary.PropositionalEquality as P using (_≡_)
+
 infix  3 _⊢_
 
 infixr 5 ƛ_
@@ -62,13 +64,10 @@ data _⊢_ where
        -------------
      → Ψ , Γ ⊢ B
      
-  ⌞_⌟₁ : Ψ ⊢ □ B
-         ----------
-       → Ψ , Γ ⊢ B
-
-  ⌞_⌟₂ : Ψ ⊢ □ B
-         -------------
-       → Ψ , Γ , Δ ⊢ B
+  unbox : (n : ℕ)
+        → drop n Ψ ⊢ □ B
+          ----------
+        → Ψ , Γ ⊢ B
 
   mfix_
     : Ψ , Γ , (∅ , □ A) ⊢ A
@@ -81,6 +80,12 @@ data _⊢_ where
 ------------------------------------------------------------------------------
 -- Examples
 
+⌞_⌟₁ : Ψ ⊢ □ B → Ψ , Γ ⊢ B
+⌞ M ⌟₁ = unbox 0 M
+
+⌞_⌟₂ : Ψ ⊢ □ B → Ψ , Γ , Δ ⊢ B
+⌞ M ⌟₂ = unbox 1 M
+
 GL : Ψ , Γ ⊢ □ (□ A →̇ A) →̇ □ A
 GL = ƛ mfix (⌞ # 0 ⌟₁ · # 0)
 
@@ -92,6 +97,9 @@ ax4 = ƛ mfix mfix ⌞ # 0 ⌟₂
      → Ψ , Γ₂ , Γ₁ , Γ₀ ⊢ A
 ⌞ M ⌟₃ = ⌞ mfix ⌞ M ⌟₂ ⌟₂
 
+box3 : Ψ , Γ ⊢ □ A →̇ □ □ □ A
+box3 = ƛ mfix mfix mfix ⌞ # 0 ⌟₃
+
 ------------------------------------------------------------------------------
 -- Substitution
 data Rename : Cxts → Cxts → Set where
@@ -102,6 +110,11 @@ data Rename : Cxts → Cxts → Set where
     : Rename Ψ Ξ
     → (∀ {A} → Γ ∋ A → Δ ∋ A)
     → Rename (Ψ , Γ) (Ξ , Δ)
+
+dropRename : (n : ℕ) → Rename Ψ Ξ → Rename (drop n Ψ) (drop n Ξ)
+dropRename zero ρs = ρs
+dropRename (suc n) ∅ = ∅
+dropRename (suc n) (ρs , ρ) = dropRename n ρs
 
 ext' : Rename Ψ Ξ → Rename (Ψ , Γ) (Ξ , Γ)
 ext' Ρ = Ρ , λ x → x
@@ -120,8 +133,7 @@ rename                   (_ , _)     ⟨⟩        = ⟨⟩
 rename                 P@(_ , _)     ⟨ M , N ⟩ = ⟨ rename P M , rename P N ⟩
 rename                 P@(_ , _)     (proj₁ M) = proj₁ rename P M
 rename                 P@(_ , _)     (proj₂ M) = proj₂ rename P M
-rename {Ξ = _ , _}       (Ρ , _)     ⌞ M ⌟₁    = ⌞ rename Ρ M ⌟₁
-rename {Ξ = _ , _ , _}   (Ρ , _ , _) ⌞ M ⌟₂    = ⌞ rename Ρ M ⌟₂
+rename                 Ρ@(_ , _)     (unbox n M) = unbox n (rename (dropRename (suc n) Ρ) M)
 rename                 P@(_ , _)     (mfix M)  = mfix (rename  (P , id) M)
 
 data Subst : Cxts → Cxts → Set where
@@ -130,6 +142,11 @@ data Subst : Cxts → Cxts → Set where
     : Subst Ψ Ξ
     → (∀ {A} → Γ ∋ A → Ξ , Δ ⊢ A)
     → Subst (Ψ , Γ) (Ξ , Δ)
+
+dropSubst : (n : ℕ) → Subst Ψ Ξ → Subst (drop n Ψ) (drop n Ξ)
+dropSubst zero σs = σs
+dropSubst (suc n) ∅ = ∅
+dropSubst (suc n) (σs , σ) = dropSubst n σs
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
   → Γ , B       ∋ A
@@ -152,8 +169,7 @@ subst                    (_ , _)     ⟨⟩        = ⟨⟩
 subst                  Σ@(_ , _)     ⟨ M , N ⟩ = ⟨ subst Σ M , subst Σ N ⟩
 subst                  Σ@(_ , _)     (proj₁ M) = proj₁ subst Σ M
 subst                  Σ@(_ , _)     (proj₂ M) = proj₂ subst Σ M
-subst {Ξ = _ , _ }       (Σ , _)     ⌞ M ⌟₁    = ⌞ subst Σ M ⌟₁
-subst {Ξ = _ , _ , _}    (Σ , _ , _) ⌞ M ⌟₂    = ⌞ subst Σ M ⌟₂
+subst                  Σ@(_ , _)     (unbox n M) = unbox n (subst (dropSubst (suc n) Σ) M)
 subst                  Σ@(_ , _)     (mfix M)  = mfix (subst (Σ , `_) M)
 
 _[_] : Ψ , (Γ , B) ⊢ A
@@ -163,16 +179,29 @@ N [ M ] = subst (`s , λ { Z → M ; (S x) → ` x }) N
 
 ------------------------------------------------------------------------------
 -- Structural rules
-
 wk
   : Ψ , Γ₀ ⊢ A
   → Ψ , (Γ₀ , B) ⊢ A
 wk = rename (ids , S_)
 
 wkCxts
-  : Ψ ⧺ Ξ , Γ ⊢ A
+  : (n : ℕ)
+  → (Ξ : Cxts)
+  → (drop n Ψ) ⧺ Ξ , Γ ⊢ A
     -------------
-  → Ψ , Δ ⧺ Ξ , Γ ⊢ A
+  → Ψ ⧺ Ξ , Γ ⊢ A
+wkCxts zero Ξ M = M
+wkCxts (suc n) Ξ (` x) = ` x
+wkCxts (suc n) Ξ (ƛ M) = ƛ wkCxts (suc n) Ξ M
+wkCxts (suc n) Ξ (M · N) = wkCxts (suc n) Ξ M · wkCxts (suc n) Ξ N
+wkCxts (suc n) Ξ ⟨⟩ = ⟨⟩
+wkCxts (suc n) Ξ ⟨ M , N ⟩ = ⟨ wkCxts (suc n) Ξ M , wkCxts (suc n) Ξ N ⟩
+wkCxts (suc n) Ξ (proj₁ M) = proj₁ wkCxts (suc n) Ξ M
+wkCxts (suc n) Ξ (proj₂ M) = proj₂ wkCxts (suc n) Ξ M
+wkCxts (suc n) Ξ (mfix M) = mfix wkCxts (suc n) (Ξ , _) M
+wkCxts (suc n) Ξ (unbox m M) = {! Ξ !}
+
+{-
 wkCxts {Ξ = ∅}         ⌞ M ⌟₁    = ⌞ M ⌟₂
 wkCxts {Ξ = Ξ , _}     ⌞ M ⌟₁    = ⌞ wkCxts M ⌟₁
 wkCxts {Ξ = ∅}         ⌞ M ⌟₂    = ⌞ M ⌟₃
@@ -186,8 +215,7 @@ wkCxts                 ⟨ M , N ⟩ = ⟨ wkCxts M , wkCxts N ⟩
 wkCxts                 (proj₁ M) = proj₁ wkCxts M
 wkCxts                 (proj₂ M) = proj₂ wkCxts M
 wkCxts {Ξ = Ξ} {Γ = Γ} (mfix M)  = mfix wkCxts {Ξ = Ξ , Γ} M
-
-
+-}
 ↑_ : Ψ , ∅ ⊢ A
      ---------
    → Ψ , Γ ⊢ A
@@ -228,17 +256,14 @@ mfix′ M = ⌞ mfix M ⌟₁
 
 ------------------------------------------------------------------------------
 -- One-step reduction rules
-
+{-
 infix 3 _⊢_-→_
 data _⊢_-→_ : (Ψ : Cxts) → (M N : Ψ ⊢ A) → Set where
   β-ƛ·
     : Ψ , Γ ⊢ (ƛ M) · N -→ M [ N ]
 
-  β-⌞mfix⌟₁
-    : _ ⊢ ⌞ mfix M ⌟₁ -→ (M [ mfix ⌞ mfix M ⌟₂ ])
-
-  β-⌞mfix⌟₂
-    : Ψ , Γ₂ , Γ₁ , Γ₀ ⊢ ⌞ mfix M ⌟₂ -→ ↑ ((wkCxts {Ξ = ∅} M) [ mfix ⌞ mfix M ⌟₃ ])
+  β-unbox-mfix
+    : Ψ , Γ ⊢ unbox n (mfix M) -→ {! (M [ mfix ⌞ mfix M ⌟₂ ]) !}
 
   β-proj₁-⟨,⟩
     : Ψ , Γ ⊢ proj₁ ⟨ M , N ⟩ -→ M
@@ -344,3 +369,4 @@ progress             (proj₂ M) with progress M
 ... | done V-⟨,⟩               = step β-proj₂-⟨,⟩
 ... | step M→M′                = step (ξ-proj₂ M→M′)
 progress             (mfix M)  = done V-mfix
+-}
