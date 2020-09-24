@@ -45,6 +45,11 @@ map : ∀ {X Y} → (X → Y) → Context X → Context Y
 map f ∅       = ∅
 map f (Γ , A) = map f Γ , f A
 
+drop : ℕ → Context Ty → Context Ty
+drop zero    Γ       = Γ
+drop (suc _) ∅       = ∅
+drop (suc n) (Γ , _) = drop n Γ
+
 ------------------------------------------------------------------------------
 -- Membership
 
