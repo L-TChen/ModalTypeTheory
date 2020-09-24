@@ -126,8 +126,9 @@ data _︔_⊢_⇐_ where
 ∥ M · N     ∥⁺  = ∥ M ∥⁺ · ∥ N ∥⁻ 
 ∥ ⊢proj₁ M  ∥⁺  = proj₁ ∥ M ∥⁺
 ∥ ⊢proj₂ M  ∥⁺  = proj₂ ∥ M ∥⁺
-∥ ⊢mlet N M ∥⁺  = mlet ∥ N ∥⁺ ∥ M ∥⁺
+∥ ⊢mlet N M ∥⁺  = mlet  ∥ N ∥⁺ ∥ M ∥⁺
 ∥ ⊢⇐ M      ∥⁺  = ∥ M ∥⁻
+
 ∥ ⊢ƛ M      ∥⁻  = DB.ƛ ∥ M ∥⁻
 ∥ ⊢⟨⟩       ∥⁻  = ⟨⟩
 ∥ ⟨ M , N ⟩ ∥⁻  = ⟨ ∥ M ∥⁻ , ∥ N ∥⁻ ⟩
@@ -177,11 +178,12 @@ uniq-⇒ (⊢mlet ⊢N ⊢M) (⊢mlet ⊢N′ ⊢M′) rewrite □≡ (uniq-⇒ 
 synthesize
   : (Δ Γ : Cxt) (M : Term⁺)
     --------------------------------
-  → Dec (∃[ A ](Δ ︔ Γ ⊢ M ⇒ A))
+  → Dec (∃[ A ] (Δ ︔ Γ ⊢ M ⇒ A))
 inherit
   : (Δ Γ : Cxt) (M : Term⁻) (A : Type)
     ----------------------------------
   → Dec (Δ ︔ Γ ⊢ M ⇐ A)
+
 synthesize Δ Γ (` x)              with lookup Γ x
 ... | no ¬∃        = no  λ{(A , ⊢` ∋x) → ¬∃ ( A , ∋x )}
 ... | yes (A , ∋x) = yes (A , ⊢` ∋x)
@@ -248,3 +250,13 @@ inherit Δ Γ (M ⇒) B       with synthesize Δ Γ M
 ... | yes (A , ⊢M) with A ≟Tp B
 ...   | no  A≢B             =  no  (¬switch ⊢M A≢B)
 ...   | yes A≡B             =  yes (⊢⇒ ⊢M A≡B)
+
+------------------------------------------------------------------------------
+-- Term⁺  can be checked against a type too
+
+check-synthesized : (Δ Γ : Cxt) (M : Term⁺) (A : Type) → Dec (Δ ︔ Γ ⊢ M ⇒ A)
+check-synthesized Δ Γ M A with synthesize Δ Γ M
+... | no ¬⊢M         = no λ ⊢M → ¬⊢M (A , ⊢M)
+... | yes (B , ⊢M⇒B) with A ≟Tp B
+...   | no ¬A≡B  = no  λ ⊢M⇒A → ¬A≡B (uniq-⇒ ⊢M⇒A ⊢M⇒B) 
+...   | yes refl = yes ⊢M⇒B
