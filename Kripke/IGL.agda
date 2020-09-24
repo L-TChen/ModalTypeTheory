@@ -84,6 +84,9 @@ data _⊢_ where
 GL : Ψ , Γ ⊢ □ (□ A →̇ A) →̇ □ A
 GL = ƛ mfix (⌞ # 0 ⌟₁ · # 0)
 
+ax4 : Ψ , Γ ⊢ □ A →̇ □ □ A
+ax4 = ƛ mfix mfix ⌞ # 0 ⌟₂
+
 ⌞_⌟₃ : Ψ ⊢ □ A
        --------------------
      → Ψ , Γ₂ , Γ₁ , Γ₀ ⊢ A
@@ -202,8 +205,14 @@ wkCxts {Ξ = Ξ} {Γ = Γ} (mfix M)  = mfix wkCxts {Ξ = Ξ , Γ} M
 -- diagonal argument as an intermediate form of gnum′
 diag : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
            -----------------------------
-         → Ψ , Γ , ∅ ⊢ □ A
+         → Ψ , Γ , Δ ⊢ □ A
 diag M = proj₁ ⌞ mfix ⟨ ⌜ proj₂ ⌞ # 0 ⌟₁ ⌝ , M ⟩ ⌟₁
+
+-- ⌞_⌟₂ is derivable from other rules
+⌞_⌟₂′ : Ψ ⊢ □ A
+        --------------
+      → Ψ , Γ , Δ ⊢ A
+⌞_⌟₂′ {Ψ = Ψ , _} M = ⌞ diag ⌞ M ⌟₁ ⌟₁
 
 four : Ψ , Γ ⊢ □ A
         --------------
