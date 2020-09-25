@@ -261,7 +261,7 @@ data _⊢_-→_ : (Ψ : Cxts) → (M N : Ψ ⊢ A) → Set where
 
   β-unbox-mfix
     : {n : Prefix (Ψ , Γ) Ξ}
-    → Ξ , Δ ⊢ unbox n (mfix M) -→ (↑ (wkCxts ∅ n M [ mfix unbox (S n) (mfix M) ]))
+    → Ξ , Δ ⊢ unbox n (mfix M) -→ ↑ wkCxts ∅ n (M [ mfix ⌞ mfix M ⌟₂ ])
 
   β-proj₁-⟨,⟩
     : Ψ , Γ ⊢ proj₁ ⟨ M , N ⟩ -→ M
