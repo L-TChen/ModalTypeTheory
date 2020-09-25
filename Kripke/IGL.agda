@@ -203,8 +203,8 @@ wkCxts
 wkCxts Ξ Z M = M
 wkCxts Ξ (S n) (unbox m M) with prefix-⧺⁻ Ξ m
 ... | inj₁ x = unbox (prefix-trans (S prefix-trans x n) (prefix-⧺ᵣ _)) M
-... | inj₂ (∅ Data.Product., Ξ₂ Data.Product., P.refl Data.Product., P.refl) = unbox (prefix-trans (S n) (prefix-⧺ᵣ _)) M
-... | inj₂ ((Ξ₁ , Γ′) Data.Product., Ξ₂ Data.Product., P.refl Data.Product., P.refl) = unbox (prefix-⧺ₗ _ (prefix-⧺ᵣ Ξ₂)) (wkCxts Ξ₁ (S n) M)
+... | inj₂ (∅ Data.Product., P.refl Data.Product., m′) = unbox (prefix-trans (S n) (prefix-⧺ᵣ _)) M
+... | inj₂ ((Ξ₁ , Γ′) Data.Product., P.refl Data.Product., m′) = unbox (prefix-⧺ₗ _ m′) (wkCxts Ξ₁ (S n) M)
 wkCxts Ξ (S n) (` x) = ` x
 wkCxts Ξ (S n) (ƛ M) = ƛ wkCxts Ξ (S n) M
 wkCxts Ξ (S n) (M · N) = wkCxts Ξ (S n) M · wkCxts Ξ (S n) N

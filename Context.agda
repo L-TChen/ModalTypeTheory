@@ -108,13 +108,12 @@ prefix-⧺ᵣ-rev Z = _ Data.Product., P.refl
 prefix-⧺ᵣ-rev (S n) with prefix-⧺ᵣ-rev n
 ... | Δ Data.Product., eq = (Δ , _) Data.Product., P.cong (_, _) eq
 
--- TODO 
-prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ₁ ] ∃[ Θ₂ ] ((Δ ⧺ Θ₁) ≡ Γ × (Θ₁ ⧺ Θ₂) ≡ Θ)
+prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ′ ] ((Δ ⧺ Θ′) ≡ Γ × Prefix Θ′ Θ)
 prefix-⧺⁻ ∅ n = inj₁ n
-prefix-⧺⁻ (Θ , _) Z = inj₂ ((Θ , _) Data.Product., ∅ Data.Product., P.refl Data.Product., P.refl)
+prefix-⧺⁻ (Θ , _) Z = inj₂ ((Θ , _) Data.Product., P.refl Data.Product., Z)
 prefix-⧺⁻ (Θ , _) (S n) with prefix-⧺⁻ Θ n
 ... | inj₁ x = inj₁ x
-... | inj₂ (Θ₁ Data.Product., Θ₂ Data.Product., P.refl Data.Product., P.refl) = inj₂ (Θ₁ Data.Product., (Θ₂ , _) Data.Product., P.refl Data.Product., P.refl)
+... | inj₂ (Θ′ Data.Product., P.refl Data.Product., n′) = inj₂ (Θ′ Data.Product., P.refl Data.Product., S n′)
 
 prefix-⧺ₗ : ∀ Γ → Prefix Δ Θ → Prefix (Γ ⧺ Δ) (Γ ⧺ Θ)
 prefix-⧺ₗ Γ Z = Z
