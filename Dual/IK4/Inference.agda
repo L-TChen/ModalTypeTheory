@@ -22,9 +22,9 @@ infix   9  `_
 
 private
   variable
-    x y       : Id
-    Γ Δ       : Cxt
-    A B A′ B′ : Type
+    x   : Id
+    Γ Δ : Cxt
+    A B : Type
 
 data Term⁺ : Set
 data Term⁻ : Set

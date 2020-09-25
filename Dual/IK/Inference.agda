@@ -22,9 +22,9 @@ infix   9  `_
 
 private
   variable
-    x y       : Id
-    Γ Δ       : Cxt
-    A B A′ B′ : Type
+    x     : Id
+    Γ Δ   : Cxt
+    A B   : Type
 
 data Term⁺ : Set
 data Term⁻ : Set
@@ -252,11 +252,9 @@ inherit Δ Γ (M ⇒) B       with synthesize Δ Γ M
 ...   | yes A≡B             =  yes (⊢⇒ ⊢M A≡B)
 
 ------------------------------------------------------------------------------
--- Term⁺  can be checked against a type too
+--
 
 check-synthesized : (Δ Γ : Cxt) (M : Term⁺) (A : Type) → Dec (Δ ︔ Γ ⊢ M ⇒ A)
-check-synthesized Δ Γ M A with synthesize Δ Γ M
-... | no ¬⊢M         = no λ ⊢M → ¬⊢M (A , ⊢M)
-... | yes (B , ⊢M⇒B) with A ≟Tp B
-...   | no ¬A≡B  = no  λ ⊢M⇒A → ¬A≡B (uniq-⇒ ⊢M⇒A ⊢M⇒B) 
-...   | yes refl = yes ⊢M⇒B
+check-synthesized Δ Γ M A with inherit Δ Γ (M ⇒) A
+... | no ¬⊢M           = no λ ⊢M → ¬⊢M (⊢⇒ ⊢M refl)
+... | yes (⊢⇒ ⊢M refl) = yes ⊢M
