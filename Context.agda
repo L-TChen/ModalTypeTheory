@@ -123,12 +123,12 @@ prefix-⧺ᵣ-rev Z = _ , P.refl
 prefix-⧺ᵣ-rev (S n) with prefix-⧺ᵣ-rev n
 ... | Δ , eq = (Δ , _) , P.cong (_, _) eq
 
-prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ′ ] ((Δ ⧺ Θ′) ≡ Γ × Prefix Θ′ Θ)
+prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ′ ] ∃[ A ]((Δ ⧺ (Θ′ , A)) ≡ Γ × Prefix (Θ′ , A) Θ)
 prefix-⧺⁻ ∅ n = inj₁ n
-prefix-⧺⁻ (Θ , _) Z = inj₂ ((Θ , _) , (P.refl , Z))
-prefix-⧺⁻ (Θ , _) (S n) with prefix-⧺⁻ Θ n
+prefix-⧺⁻ (Θ , B) Z = inj₂ (Θ , (B , (P.refl , Z)))
+prefix-⧺⁻ (Θ , B) (S n) with prefix-⧺⁻ Θ n
 ... | inj₁ x = inj₁ x
-... | inj₂ (Θ′ , (P.refl , n′)) = inj₂ (Θ′ , (P.refl , S n′))
+... | inj₂ (Θ′ , (A , (P.refl , n′))) = inj₂ (Θ′ , (A , (P.refl , S n′)))
 
 prefix-⧺ₗ : ∀ Γ → Prefix Δ Θ → Prefix (Γ ⧺ Δ) (Γ ⧺ Θ)
 prefix-⧺ₗ Γ Z = Z

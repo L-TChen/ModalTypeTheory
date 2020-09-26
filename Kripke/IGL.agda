@@ -180,31 +180,33 @@ _[_] : Ψ , (Γ , B) ⊢ A
 N [ M ] = subst (`s , λ { Z → M ; (S x) → ` x }) N
 
 ------------------------------------------------------------------------------
--- Structural rules
-wk
-  : Ψ , Γ₀ ⊢ A
-  → Ψ , (Γ₀ , B) ⊢ A
-wk = rename (ids , S_)
+-- Label Substitution
 
-wkCxts
+labelSubst
   : (Ξ : Cxts)
   → (Prefix Ψ Ψ⁺)
   → (Ψ ⧺ Ξ) , Γ ⊢ A
     -------------
   → (Ψ⁺ ⧺ Ξ) , Γ ⊢ A
-wkCxts Ξ Z M = M
-wkCxts Ξ (S n) (unbox m M) with prefix-⧺⁻ Ξ m
-... | inj₁ x = unbox (prefix-trans (S prefix-trans x n) (prefix-⧺ᵣ _)) M
-... | inj₂ (∅ , (P.refl , m′)) = unbox (prefix-trans (S n) (prefix-⧺ᵣ _)) M
-... | inj₂ ((Ξ₁ , Γ′) , (P.refl , m′)) = unbox (prefix-⧺ₗ _ m′) (wkCxts Ξ₁ (S n) M)
-wkCxts Ξ (S n) (` x) = ` x
-wkCxts Ξ (S n) (ƛ M) = ƛ wkCxts Ξ (S n) M
-wkCxts Ξ (S n) (M · N) = wkCxts Ξ (S n) M · wkCxts Ξ (S n) N
-wkCxts Ξ (S n) ⟨⟩ = ⟨⟩
-wkCxts Ξ (S n) ⟨ M , N ⟩ = ⟨ wkCxts Ξ (S n) M , wkCxts Ξ (S n) N ⟩
-wkCxts Ξ (S n) (proj₁ M) = proj₁ wkCxts Ξ (S n) M
-wkCxts Ξ (S n) (proj₂ M) = proj₂ wkCxts Ξ (S n) M
-wkCxts Ξ (S n) (mfix M) = mfix wkCxts (Ξ , _) (S n) M
+labelSubst Ξ Z M = M
+labelSubst Ξ (S n) (unbox m M) with prefix-⧺⁻ Ξ m
+... | inj₁ x = unbox (prefix-trans (S prefix-trans x n) (prefix-⧺ᵣ Ξ)) M
+... | inj₂ (Ξ₁ , (Γ′ , (P.refl , m′))) = unbox (prefix-⧺ₗ _ m′) (labelSubst Ξ₁ (S n) M)
+labelSubst Ξ (S n) (` x) = ` x
+labelSubst Ξ (S n) (ƛ M) = ƛ labelSubst Ξ (S n) M
+labelSubst Ξ (S n) (M · N) = labelSubst Ξ (S n) M · labelSubst Ξ (S n) N
+labelSubst Ξ (S n) ⟨⟩ = ⟨⟩
+labelSubst Ξ (S n) ⟨ M , N ⟩ = ⟨ labelSubst Ξ (S n) M , labelSubst Ξ (S n) N ⟩
+labelSubst Ξ (S n) (proj₁ M) = proj₁ labelSubst Ξ (S n) M
+labelSubst Ξ (S n) (proj₂ M) = proj₂ labelSubst Ξ (S n) M
+labelSubst Ξ (S n) (mfix M) = mfix labelSubst (Ξ , _) (S n) M
+
+------------------------------------------------------------------------------
+-- Structural rules
+wk
+  : Ψ , Γ₀ ⊢ A
+  → Ψ , (Γ₀ , B) ⊢ A
+wk = rename (ids , S_)
 
 ↑_ : Ψ , ∅ ⊢ A
      ---------
@@ -253,7 +255,7 @@ data _⊢_-→_ : (Ψ : Cxts) → (M N : Ψ ⊢ A) → Set where
 
   β-unbox-mfix
     : {n : Prefix (Ψ , Γ) Ξ}
-    → Ξ , Δ ⊢ unbox n (mfix M) -→ ↑ wkCxts ∅ n (M [ mfix ⌞ mfix M ⌟₂ ])
+    → Ξ , Δ ⊢ unbox n (mfix M) -→ ↑ labelSubst ∅ n (M [ mfix ⌞ mfix M ⌟₂ ])
 
   β-proj₁-⟨,⟩
     : Ψ , Γ ⊢ proj₁ ⟨ M , N ⟩ -→ M
