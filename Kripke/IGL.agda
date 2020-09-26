@@ -12,7 +12,7 @@ open import Context
   hiding ([_])
 
 open import Relation.Binary.PropositionalEquality as P using (_≡_)
-open import Data.Product using (∃-syntax; _×_)
+open import Data.Product using (∃-syntax; _×_; _,_)
 open import Data.Sum using (inj₁; inj₂)
 
 infix  3 _⊢_
@@ -72,7 +72,7 @@ data _⊢_ where
         → Ψ⁺ , Γ ⊢ B
 
   mfix_
-    : Ψ , Γ , (∅ , □ A) ⊢ A
+    : (Ψ , Γ) , (∅ , □ A) ⊢ A
       ---------------------
     → Ψ , Γ ⊢ □ A
 
@@ -89,7 +89,7 @@ unbox# n M = unbox (prefix-drop⁺ n) M
 ⌞_⌟₁ : Ψ ⊢ □ B → Ψ , Γ ⊢ B
 ⌞ M ⌟₁ = unbox# 0 M
 
-⌞_⌟₂ : Ψ ⊢ □ B → Ψ , Γ , Δ ⊢ B
+⌞_⌟₂ : Ψ ⊢ □ B → (Ψ , Γ) , Δ ⊢ B
 ⌞ M ⌟₂ = unbox# 1 M
 
 GL : Ψ , Γ ⊢ □ (□ A →̇ A) →̇ □ A
@@ -97,14 +97,6 @@ GL = ƛ mfix (⌞ # 0 ⌟₁ · # 0)
 
 ax4 : Ψ , Γ ⊢ □ A →̇ □ □ A
 ax4 = ƛ mfix mfix ⌞ # 0 ⌟₂
-
-⌞_⌟₃ : Ψ ⊢ □ A
-       --------------------
-     → Ψ , Γ₂ , Γ₁ , Γ₀ ⊢ A
-⌞ M ⌟₃ = ⌞ mfix ⌞ M ⌟₂ ⌟₂
-
-box3 : Ψ , Γ ⊢ □ A →̇ □ □ □ A
-box3 = ƛ mfix mfix mfix ⌞ # 0 ⌟₃
 
 ------------------------------------------------------------------------------
 -- Substitution
@@ -118,9 +110,9 @@ data Rename : Cxts → Cxts → Set where
     → Rename (Ψ , Γ) (Ξ , Δ)
 
 prefixRename : Prefix Ψ Ψ⁺ → Rename Ψ⁺ Ξ⁺ → ∃[ Ξ ] (Prefix Ξ Ξ⁺ × Rename Ψ Ξ)
-prefixRename {Ξ⁺ = Ξ⁺} Z ρs = Ξ⁺ Data.Product., Z Data.Product., ρs
+prefixRename {Ξ⁺ = Ξ⁺} Z ρs = Ξ⁺ , (Z , ρs)
 prefixRename (S n) (ρs , ρ) with prefixRename n ρs
-... | Ξ′ Data.Product., n′ Data.Product., ρs′ = Ξ′ Data.Product., (S n′) Data.Product., ρs′
+... | Ξ′ , (n′ , ρs′) = Ξ′ , (S n′ , ρs′)
 
 ext' : Rename Ψ Ξ → Rename (Ψ , Γ) (Ξ , Γ)
 ext' Ρ = Ρ , λ x → x
@@ -140,7 +132,7 @@ rename ρs@(_  , _) ⟨ M , N ⟩ = ⟨ rename ρs M , rename ρs N ⟩
 rename ρs@(_  , _) (proj₁ M) = proj₁ rename ρs M
 rename ρs@(_  , _) (proj₂ M) = proj₂ rename ρs M
 rename    (ρs , _) (unbox n M) with prefixRename n ρs
-... | Ξ′ Data.Product., n′ Data.Product., ρs′ = unbox n′ (rename ρs′ M)
+... | Ξ′ , (n′ , ρs′) = unbox n′ (rename ρs′ M)
 rename ρs@(_  , _) (mfix M)  = mfix (rename  (ρs , id) M)
 
 data Subst : Cxts → Cxts → Set where
@@ -151,9 +143,9 @@ data Subst : Cxts → Cxts → Set where
     → Subst (Ψ , Γ) (Ξ , Δ)
 
 prefixSubst : Prefix Ψ Ψ⁺ → Subst Ψ⁺ Ξ⁺ → ∃[ Ξ ] (Prefix Ξ Ξ⁺ × Subst Ψ Ξ)
-prefixSubst {Ξ⁺ = Ξ⁺} Z σs = Ξ⁺ Data.Product., Z Data.Product., σs
+prefixSubst {Ξ⁺ = Ξ⁺} Z σs = Ξ⁺ , (Z , σs)
 prefixSubst (S n) (σs , σ) with prefixSubst n σs
-... | Ξ′ Data.Product., n′ Data.Product., σs′ = Ξ′ Data.Product., (S n′) Data.Product., σs′
+... | Ξ′ , (n′ , σs′) = Ξ′ , (S n′ , σs′)
 
 exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
   → Γ , B       ∋ A
@@ -179,7 +171,7 @@ subst σs@(_  , _) ⟨ M , N ⟩ = ⟨ subst σs M , subst σs N ⟩
 subst σs@(_  , _) (proj₁ M) = proj₁ subst σs M
 subst σs@(_  , _) (proj₂ M) = proj₂ subst σs M
 subst    (σs , _) (unbox n M) with prefixSubst n σs
-... | Ξ′ Data.Product., n′ Data.Product., σs′ = unbox n′ (subst σs′ M)
+... | Ξ′ , (n′ , σs′) = unbox n′ (subst σs′ M)
 subst σs@(_  , _) (mfix M)  = mfix (subst (exts' σs) M)
 
 _[_] : Ψ , (Γ , B) ⊢ A
@@ -197,14 +189,14 @@ wk = rename (ids , S_)
 wkCxts
   : (Ξ : Cxts)
   → (Prefix Ψ Ψ⁺)
-  → Ψ ⧺ Ξ , Γ ⊢ A
+  → (Ψ ⧺ Ξ) , Γ ⊢ A
     -------------
-  → Ψ⁺ ⧺ Ξ , Γ ⊢ A
+  → (Ψ⁺ ⧺ Ξ) , Γ ⊢ A
 wkCxts Ξ Z M = M
 wkCxts Ξ (S n) (unbox m M) with prefix-⧺⁻ Ξ m
 ... | inj₁ x = unbox (prefix-trans (S prefix-trans x n) (prefix-⧺ᵣ _)) M
-... | inj₂ (∅ Data.Product., P.refl Data.Product., m′) = unbox (prefix-trans (S n) (prefix-⧺ᵣ _)) M
-... | inj₂ ((Ξ₁ , Γ′) Data.Product., P.refl Data.Product., m′) = unbox (prefix-⧺ₗ _ m′) (wkCxts Ξ₁ (S n) M)
+... | inj₂ (∅ , (P.refl , m′)) = unbox (prefix-trans (S n) (prefix-⧺ᵣ _)) M
+... | inj₂ ((Ξ₁ , Γ′) , (P.refl , m′)) = unbox (prefix-⧺ₗ _ m′) (wkCxts Ξ₁ (S n) M)
 wkCxts Ξ (S n) (` x) = ` x
 wkCxts Ξ (S n) (ƛ M) = ƛ wkCxts Ξ (S n) M
 wkCxts Ξ (S n) (M · N) = wkCxts Ξ (S n) M · wkCxts Ξ (S n) N
@@ -223,21 +215,21 @@ wkCxts Ξ (S n) (mfix M) = mfix wkCxts (Ξ , _) (S n) M
 -- □ intro by GL
 
 ⌜_⌝
-  : Ψ , Γ , ∅ ⊢ A
+  : (Ψ , Γ) , ∅ ⊢ A
   → Ψ , Γ     ⊢ □ A
 ⌜ M ⌝ = mfix (wk M)
 
 ------------------------------------------------------------------------------
 -- diagonal argument as an intermediate form of gnum′
-diag : Ψ , Γ , (∅ , □ (□ A ×̇ A)) ⊢ A
-           -----------------------------
-         → Ψ , Γ , Δ ⊢ □ A
+diag : (Ψ , Γ) , (∅ , □ (□ A ×̇ A)) ⊢ A
+       -----------------------------
+     → (Ψ , Γ) , Δ ⊢ □ A
 diag M = proj₁ ⌞ mfix ⟨ ⌜ proj₂ ⌞ # 0 ⌟₁ ⌝ , M ⟩ ⌟₁
 
--- ⌞_⌟₂ is derivable from other rules
+-- ⌞_⌟₂ is derivable from ⌞_⌟₁ and mfix
 ⌞_⌟₂′ : Ψ ⊢ □ A
         --------------
-      → Ψ , Γ , Δ ⊢ A
+      → (Ψ , Γ) , Δ ⊢ A
 ⌞_⌟₂′ {Ψ = Ψ , _} M = ⌞ diag ⌞ M ⌟₁ ⌟₁
 
 four : Ψ , Γ ⊢ □ A
@@ -246,8 +238,8 @@ four : Ψ , Γ ⊢ □ A
 four M = ⌜ diag ⌞ M ⌟₁ ⌝
 
 mfix′
-  : Ψ , Γ , (∅ , □ A) ⊢ A
-  → Ψ , Γ , ∅ ⊢ A
+  : (Ψ , Γ) , (∅ , □ A) ⊢ A
+  → (Ψ , Γ) , ∅ ⊢ A
 mfix′ M = ⌞ mfix M ⌟₁
 
 ------------------------------------------------------------------------------
@@ -348,7 +340,7 @@ data Progress {n : ℕ} : ∅ₙ (suc n) ⊢ A → Set where
 
 progress : (M : ∅ₙ (suc n) ⊢ A) → Progress M
 progress (unbox m M) with prefix-replicate m
-... | suc n Data.Product., P.refl with progress M
+... | suc n , P.refl with progress M
 ... | done V-mfix              = step β-unbox-mfix
 ... | step M→M′                = step (ξ-unbox M→M′)
 progress             (ƛ M)     = done V-ƛ

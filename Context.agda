@@ -9,7 +9,7 @@ open import Data.Nat
 open import Data.Empty
 open import Data.Sum hiding (map)
 open import Relation.Binary.PropositionalEquality as P using (_≡_)
-open import Data.Product using (∃-syntax; _×_)
+open import Data.Product using (∃-syntax; _×_; _,_)
 
 open import Type public
 
@@ -46,6 +46,11 @@ map : ∀ {X Y} → (X → Y) → Context X → Context Y
 map f ∅       = ∅
 map f (Γ , A) = map f Γ , f A
 
+drop : ℕ → Context Ty → Context Ty
+drop zero    Γ       = Γ
+drop (suc _) ∅       = ∅
+drop (suc n) (Γ , _) = drop n Γ
+
 ------------------------------------------------------------------------------
 -- Membership
 
@@ -80,44 +85,10 @@ data Prefix {Ty : Set} : Context Ty → Context Ty → Set where
   Z  : Prefix Γ Γ
   S_ : Prefix Γ Δ → Prefix Γ (Δ , A)
 
-drop : ℕ → Context Ty → Context Ty
-drop zero    Γ       = Γ
-drop (suc _) ∅       = ∅
-drop (suc n) (Γ , _) = drop n Γ
-
 prefix-trans : Prefix Γ Δ → Prefix Δ Θ → Prefix Γ Θ
 prefix-trans m Z = m
 prefix-trans m (S n) = S prefix-trans m n
 
-prefix-drop⁺ : (n : ℕ) → Prefix (drop n Γ) Γ
-prefix-drop⁺             zero = Z
-prefix-drop⁺ {Γ = ∅}     (suc n) = Z
-prefix-drop⁺ {Γ = Γ , _} (suc n) = S (prefix-drop⁺ n)
-
-prefix-replicate : {n : ℕ} → Prefix Γ (replicate n A) → ∃[ n′ ] (Γ ≡ replicate n′ A)
-prefix-replicate {n = zero} Z = zero Data.Product., P.refl
-prefix-replicate {n = suc n} Z = (suc n) Data.Product., P.refl
-prefix-replicate {n = suc n} (S m) = prefix-replicate m
-
-prefix-⧺ᵣ : ∀ Δ → Prefix Γ (Γ ⧺ Δ)
-prefix-⧺ᵣ ∅ = Z
-prefix-⧺ᵣ (Δ , A) = S prefix-⧺ᵣ Δ
-
-prefix-⧺ᵣ-rev : Prefix Γ Θ → ∃[ Δ ] ((Γ ⧺ Δ) ≡ Θ)
-prefix-⧺ᵣ-rev Z = _ Data.Product., P.refl
-prefix-⧺ᵣ-rev (S n) with prefix-⧺ᵣ-rev n
-... | Δ Data.Product., eq = (Δ , _) Data.Product., P.cong (_, _) eq
-
-prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ′ ] ((Δ ⧺ Θ′) ≡ Γ × Prefix Θ′ Θ)
-prefix-⧺⁻ ∅ n = inj₁ n
-prefix-⧺⁻ (Θ , _) Z = inj₂ ((Θ , _) Data.Product., P.refl Data.Product., Z)
-prefix-⧺⁻ (Θ , _) (S n) with prefix-⧺⁻ Θ n
-... | inj₁ x = inj₁ x
-... | inj₂ (Θ′ Data.Product., P.refl Data.Product., n′) = inj₂ (Θ′ Data.Product., P.refl Data.Product., S n′)
-
-prefix-⧺ₗ : ∀ Γ → Prefix Δ Θ → Prefix (Γ ⧺ Δ) (Γ ⧺ Θ)
-prefix-⧺ₗ Γ Z = Z
-prefix-⧺ₗ Γ (S n) = S prefix-⧺ₗ Γ n
 ------------------------------------------------------------------------------
 -- Properties of ⧺
 
@@ -143,9 +114,46 @@ prefix-⧺ₗ Γ (S n) = S prefix-⧺ₗ Γ n
 ∅⧺∋A : ∀ {Γ} → ∅ ⧺ Γ ∋ A → Γ ∋ A
 ∅⧺∋A = P.subst (λ Γ → Γ ∋ _) (⧺-identityˡ _)
 
+prefix-⧺ᵣ : ∀ Δ → Prefix Γ (Γ ⧺ Δ)
+prefix-⧺ᵣ ∅ = Z
+prefix-⧺ᵣ (Δ , A) = S prefix-⧺ᵣ Δ
+
+prefix-⧺ᵣ-rev : Prefix Γ Θ → ∃[ Δ ] ((Γ ⧺ Δ) ≡ Θ)
+prefix-⧺ᵣ-rev Z = _ , P.refl
+prefix-⧺ᵣ-rev (S n) with prefix-⧺ᵣ-rev n
+... | Δ , eq = (Δ , _) , P.cong (_, _) eq
+
+prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ′ ] ((Δ ⧺ Θ′) ≡ Γ × Prefix Θ′ Θ)
+prefix-⧺⁻ ∅ n = inj₁ n
+prefix-⧺⁻ (Θ , _) Z = inj₂ ((Θ , _) , (P.refl , Z))
+prefix-⧺⁻ (Θ , _) (S n) with prefix-⧺⁻ Θ n
+... | inj₁ x = inj₁ x
+... | inj₂ (Θ′ , (P.refl , n′)) = inj₂ (Θ′ , (P.refl , S n′))
+
+prefix-⧺ₗ : ∀ Γ → Prefix Δ Θ → Prefix (Γ ⧺ Δ) (Γ ⧺ Θ)
+prefix-⧺ₗ Γ Z = Z
+prefix-⧺ₗ Γ (S n) = S prefix-⧺ₗ Γ n
+
 ------------------------------------------------------------------------------
 -- Properties of map
 
 ∋-map⁺ : ∀ {X Y Γ} {A : X} → (f : X → Y) → Γ ∋ A → map f Γ ∋ f A
 ∋-map⁺ f Z = Z
 ∋-map⁺ f (S x) = S ∋-map⁺ f x
+
+------------------------------------------------------------------------------
+-- Properties of drop
+
+prefix-drop⁺ : (n : ℕ) → Prefix (drop n Γ) Γ
+prefix-drop⁺             zero = Z
+prefix-drop⁺ {Γ = ∅}     (suc n) = Z
+prefix-drop⁺ {Γ = Γ , _} (suc n) = S (prefix-drop⁺ n)
+
+------------------------------------------------------------------------------
+-- Properties of replicate
+
+prefix-replicate : {n : ℕ} → Prefix Γ (replicate n A) → ∃[ n′ ] (Γ ≡ replicate n′ A)
+prefix-replicate {n = zero} Z = zero , P.refl
+prefix-replicate {n = suc n} Z = (suc n) , P.refl
+prefix-replicate {n = suc n} (S m) = prefix-replicate m
+
