@@ -17,53 +17,36 @@ private
   variable
     A B : Type 
     Γ Γ' Δ Δ' : Cxt
-    Ψ Ξ : Cxts
+    Ψ Ψ⁺ Ξ : Cxts
 
-□Subst : Cxt → Cxts → Set
-□Subst Δ Ψ = ∀ {A} → Δ ∋ A → Ψ ⊢ □ A
+data Unbox : Cxts → Type → Set where
+  _,_ : ∀ {Ψ Ψ⁺} → Prefix Ψ Ψ⁺ → Ψ ⊢ □ A → Unbox Ψ⁺ A
 
-d2k : Δ ︔ Γ ⊢ A → □Subst Δ (Ψ , Γ) → Ψ , Γ ⊢ A
+runUnbox : Unbox Ψ A → Ψ , Γ ⊢ A
+runUnbox (n , M) = unbox n M
+
+liftUnbox : Unbox Ψ A → Unbox (Ψ , Γ) A
+liftUnbox (n , M) = S n , M
+
+renameUnbox : K.Rename Ψ Ξ → Unbox Ψ A → Unbox Ξ A
+renameUnbox ρs       (Z , M) = Z , K.rename ρs M
+renameUnbox (ρs , _) ((S n) , M) = liftUnbox (renameUnbox ρs (n , M))
+
+UnboxSubst : Cxt → Cxts → Set
+UnboxSubst Δ Ψ = ∀ {A} → Δ ∋ A → Unbox Ψ A
+
+d2k : Δ ︔ Γ ⊢ A → UnboxSubst Δ (Ψ , Γ) → Ψ , Γ ⊢ A
 d2k (` x) σ = ` x
-d2k (ƛ M) σ = ƛ d2k M (λ x → K.rename (K.ids , S_) (σ x))
+d2k (ƛ M) σ = ƛ d2k M (λ x → renameUnbox (K.ids , S_) (σ x))
 d2k (M · N) σ = d2k M σ · d2k N σ
 d2k ⟨⟩ σ = ⟨⟩
 d2k ⟨ M , N ⟩ σ = ⟨ d2k M σ , d2k N σ ⟩
 d2k (proj₁ M) σ = proj₁ d2k M σ
 d2k (proj₂ M) σ = proj₂ d2k M σ
-d2k (mfix M) σ = mfix (K.subst (K.`s , λ { Z → ` Z; (S x) → ⌞ σ x ⌟ }) (d2k M (λ x → K.subst (K.`s , λ ()) (K.diag ⌞ σ x ⌟))))
--- ⌜ K.subst (K.`s , λ x → ⌞ σ x ⌟) (d2k M (λ ())) ⌝
-d2k (mlet M N) σ = d2k N (λ { Z → d2k M σ ; (S x) → σ x })
+d2k (mfix M) σ = mfix (K.subst (K.`s , λ { Z → ` Z; (S x) → runUnbox (σ x) }) (d2k M (λ x → liftUnbox (σ x))))
+d2k (mlet M N) σ = d2k N (λ { Z → (Z , d2k M σ) ; (S x) → σ x })
 
-scott
-  : ∅ , (Δ ⧺ Γ)      ⊢ A
-  → ∅ , map □_ Γ , Δ ⊢ A
-scott {Δ = Δ} {Γ = Γ} M = K.subst (∅ , σ) M where
-  σ : Δ ⧺ Γ ∋ A
-    → Ψ , map □_ Γ , Δ ⊢ A
-  σ x with ⧺-∋ Γ x
-  ... | inj₁ x' = ` x'
-  ... | inj₂ x' = ⌞ ` ∋-map⁺ □_ x' ⌟
-
-d2k'
-  : Δ ︔ Γ ⊢ A
-  → ∅ , (map (□_) Δ ⧺ Γ) ⊢ A
-d2k'                 (` x)              = ` ∋-⧺⁺ʳ _ x
-d2k'                 (ƛ M)              = ƛ d2k' M
-d2k'                 (M · N)            = d2k' M · d2k' N
-d2k'                 ⟨⟩                 = ⟨⟩
-d2k'                 ⟨ M , N ⟩          = ⟨ d2k' M , d2k' N ⟩
-d2k'                 (proj₁ M)          = proj₁ d2k' M
-d2k'                 (proj₂ M)          = proj₂ d2k' M
-d2k'                 (mfix M)           = {!!} -- ⌜ K.rename (K.ext' (∅ , ∋-⧺⁺ˡ)) (scott (d2k' M)) ⌝
-d2k' {Δ = Δ} {Γ = Γ} (mlet {A = B} M N) = K.subst (∅ , σ) (d2k' N)
-  where
-    σ : map □_ (Δ , B) ⧺ Γ ∋ A → ∅ , (map □_ Δ ⧺ Γ) ⊢ A
-    σ x with ⧺-∋ Γ x
-    ... | inj₁ Z = d2k' M
-    ... | inj₁ (S x') = ` (∋-⧺⁺ˡ x')
-    ... | inj₂ x' = ` (∋-⧺⁺ʳ _ x')
-
-
+{-
 ⧺-∋-case : {P : Type → Set} → (∀ {A} → Δ ∋ A → P A) → (∀ {A} → Δ' ∋ A → P A) → (∀ {A} → (Δ ⧺ Δ') ∋ A → P A)
 ⧺-∋-case {Δ' = Δ'} σ σ' x with ⧺-∋ Δ' x
 ... | inj₁ Δ∋A = σ Δ∋A
@@ -116,3 +99,4 @@ k2d (proj₂ M) with k2d M
 k2d (mfix M) with k2d M
 ... | Δ ، M' ، σ = bind (mfix (D.m↑ M')) σ
 k2d {A = A} (⌞_⌟ {Ψ = _ , _} M) = (∅ , A) ، ` ∋-⧺⁺ˡ Z ، λ { Z → k2d M }
+-}
