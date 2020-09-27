@@ -3,6 +3,8 @@
 module Translation.IGL where
 
 open import Data.Sum hiding (map)
+open import Data.Product using (∃-syntax; _×_) renaming (_,_ to _،_)
+open import Function hiding (_∋_)
 
 open import Kripke.IGL as K using (_⊢_)
 open import Dual.IGL   as D using (_︔_⊢_)
@@ -20,17 +22,17 @@ private
     Ψ Ψ⁺ Ξ : Cxts
 
 data Unbox : Cxts → Type → Set where
-  _,_ : ∀ {Ψ Ψ⁺} → Prefix Ψ Ψ⁺ → Ψ ⊢ □ A → Unbox Ψ⁺ A
+  unbox : ∀ {Ψ Ψ⁺} → Prefix Ψ Ψ⁺ → Ψ ⊢ □ A → Unbox Ψ⁺ A
 
 runUnbox : Unbox Ψ A → Ψ , Γ ⊢ A
-runUnbox (n , M) = unbox n M
+runUnbox (unbox n M) = unbox n M
 
 liftUnbox : Unbox Ψ A → Unbox (Ψ , Γ) A
-liftUnbox (n , M) = S n , M
+liftUnbox (unbox n M) = unbox (S n) M
 
 renameUnbox : K.Rename Ψ Ξ → Unbox Ψ A → Unbox Ξ A
-renameUnbox ρs       (Z , M) = Z , K.rename ρs M
-renameUnbox (ρs , _) ((S n) , M) = liftUnbox (renameUnbox ρs (n , M))
+renameUnbox ρs       (unbox Z M) = unbox Z (K.rename ρs M)
+renameUnbox (ρs , _) (unbox (S n) M) = liftUnbox (renameUnbox ρs (unbox n M))
 
 UnboxSubst : Cxt → Cxts → Set
 UnboxSubst Δ Ψ = ∀ {A} → Δ ∋ A → Unbox Ψ A
@@ -44,9 +46,8 @@ d2k ⟨ M , N ⟩ σ = ⟨ d2k M σ , d2k N σ ⟩
 d2k (proj₁ M) σ = proj₁ d2k M σ
 d2k (proj₂ M) σ = proj₂ d2k M σ
 d2k (mfix M) σ = mfix (K.subst (K.`s , λ { Z → ` Z; (S x) → runUnbox (σ x) }) (d2k M (λ x → liftUnbox (σ x))))
-d2k (mlet M N) σ = d2k N (λ { Z → (Z , d2k M σ) ; (S x) → σ x })
+d2k (mlet M N) σ = d2k N (λ { Z → unbox Z (d2k M σ) ; (S x) → σ x })
 
-{-
 ⧺-∋-case : {P : Type → Set} → (∀ {A} → Δ ∋ A → P A) → (∀ {A} → Δ' ∋ A → P A) → (∀ {A} → (Δ ⧺ Δ') ∋ A → P A)
 ⧺-∋-case {Δ' = Δ'} σ σ' x with ⧺-∋ Δ' x
 ... | inj₁ Δ∋A = σ Δ∋A
@@ -65,25 +66,18 @@ extᵣ Γ ρ = ⧺-∋-case (λ x → ∋-⧺⁺ˡ {Δ = Γ} (ρ x)) (∋-⧺⁺
 extₗ : ∀ Δ → D.Rename Γ Γ' → D.Rename (Δ ⧺ Γ) (Δ ⧺ Γ')
 extₗ Δ ρ = ⧺-∋-case ∋-⧺⁺ˡ (λ x → ∋-⧺⁺ʳ _ (ρ x))
 
-infix 3 _⊢'_
-infix 4 _،_،_
+{-# TERMINATING #-}
+bind : Δ ︔ Γ ⊢ A → UnboxSubst Δ (Ψ , Γ) → ∃[ Δ' ] (∅ ︔ Δ' ⧺ Γ ⊢ A × UnboxSubst Δ' Ψ)
+k2d : Ψ , Γ ⊢ A → ∃[ Δ ] (∅ ︔ Δ ⧺ Γ ⊢ A × UnboxSubst Δ Ψ)
 
-□Subst' : Cxt → Cxts → Set
-data _⊢'_ : Cxts → Type → Set where
-  _،_،_ : ∀ Δ → ∅ ︔ Δ ⧺ Γ ⊢ A → □Subst' Δ Ψ → Ψ , Γ ⊢' A 
-
-□Subst' Δ Ψ  = ∀ {A} → Δ ∋ A → Ψ ⊢' □ A
-
-⊢'-rename : (∀ {A} → Γ ∋ A → Γ' ∋ A) → (∀ {A} → Ψ , Γ ⊢' A → Ψ , Γ' ⊢' A)
-⊢'-rename ρ (Δ ، M ، σ) = Δ ، D.rename (extₗ _ ρ) M ، σ
-
-bind : Δ ︔ Γ ⊢ A → □Subst' Δ (Ψ , Γ) → Ψ , Γ ⊢' A
 bind {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
 bind {Δ = Δ , B} {Γ = Γ} N σ with σ Z
-... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (λ x → ⊢'-rename (∋-⧺⁺ʳ Δ₁) (σ (S x)))
+bind {Δ = Δ , B} {Γ = Γ} N σ | unbox Z M with k2d M
+... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (renameUnbox (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
+bind {Δ = Δ , B} {Γ = Γ} N σ | unbox (S n) M with bind {! N !} {! (λ { Z → unbox n M ; (S x) → σ x }) !}
+... | p = {!!}
 
-k2d : Ψ , Γ ⊢ A → Ψ , Γ ⊢' A
 k2d (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
 k2d (ƛ M) with k2d M
 ... | Δ ، M' ، σ = Δ ، ƛ M' ، σ
@@ -98,5 +92,4 @@ k2d (proj₂ M) with k2d M
 ... |  Δ ، M' ، σ = Δ ، proj₂ M' ، σ
 k2d (mfix M) with k2d M
 ... | Δ ، M' ، σ = bind (mfix (D.m↑ M')) σ
-k2d {A = A} (⌞_⌟ {Ψ = _ , _} M) = (∅ , A) ، ` ∋-⧺⁺ˡ Z ، λ { Z → k2d M }
--}
+k2d {A = A} (unbox n M) = (∅ , A) ، ` ∋-⧺⁺ˡ Z ، λ { Z → unbox n M }
