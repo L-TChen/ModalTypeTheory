@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 module STLC.Substitution where
 
 open import Function hiding (_∋_)
