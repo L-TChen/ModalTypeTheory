@@ -7,7 +7,6 @@ module Dual.IS4 where
 open import Function
   using (_∘_)
 open import Data.Nat
-open import Data.Sum
 
 open import Context   public
   hiding ([_])
@@ -18,7 +17,7 @@ infixr 5 ƛ_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
-infixl 8 _[_]
+infixl 8 _[_] _⟪_⟫ _m⟪_⟫
 infix  9 `_ ᵒ_ #_ m#_
 
 data _︔_⊢_ (Δ Γ : Cxt) : Type → Set
@@ -82,7 +81,8 @@ m# n  =  ᵒ count n
 -- Examples
 
 K : ∅ ︔ ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ (m# 1) · (m# 0) ⌝) 
+K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ ᵒ (S Z) · ᵒ Z ⌝)
+ -- ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ {!!} · (m# 0) ⌝) 
 
 _ : ∅ ︔ ∅ ⊢ □ (A ×̇ B) →̇ □ A ×̇ □ B
 _ = ƛ ⟨ mlet (# 0) ⌜ proj₁ m# 0 ⌝ , mlet (# 0) ⌜ proj₂ m# 0 ⌝  ⟩
@@ -147,59 +147,67 @@ exts
 exts σ Z     = ` Z
 exts σ (S p) = wk (σ p)
 
-subst
-  : Subst Δ Γ Γ′
-  → Δ ︔ Γ  ⊢ A
+_⟪_⟫
+  : Δ ︔ Γ  ⊢ A
+  → Subst Δ Γ Γ′
   → Δ ︔ Γ′ ⊢ A
-subst σ (` x)      = σ x
-subst σ (ᵒ x)      = ᵒ x
-subst σ (ƛ M)      = ƛ subst (exts σ) M
-subst σ (M · N)    = subst σ M · subst σ N
-subst σ ⟨⟩         = ⟨⟩
-subst σ ⟨ M , N ⟩  = ⟨ subst σ M , subst σ N ⟩
-subst σ (proj₁ M)  = proj₁ subst σ M
-subst σ (proj₂ N)  = proj₂ subst σ N
-subst σ ⌜ M ⌝      = ⌜ M ⌝
-subst σ (mlet L M) = mlet (subst σ L) (subst (mwk ∘ σ) M)
+(` x)      ⟪ σ ⟫ = σ x
+(ᵒ x)      ⟪ σ ⟫ = ᵒ x
+(ƛ M)      ⟪ σ ⟫ = ƛ M ⟪ exts σ ⟫
+(M · N)    ⟪ σ ⟫ = M ⟪ σ ⟫ · N ⟪ σ ⟫
+⟨⟩         ⟪ σ ⟫ = ⟨⟩
+⟨ M , N ⟩  ⟪ σ ⟫ = ⟨ M ⟪ σ ⟫ , N ⟪ σ ⟫ ⟩
+(proj₁ M)  ⟪ σ ⟫ = proj₁ M ⟪ σ ⟫
+(proj₂ N)  ⟪ σ ⟫ = proj₂ N ⟪ σ ⟫
+⌜ M ⌝      ⟪ σ ⟫ = ⌜ M ⌝
+(mlet L M) ⟪ σ ⟫ = mlet (L ⟪ σ ⟫) (M ⟪ mwk ∘ σ ⟫)
+
+subst-zero 
+  : Δ ︔ Γ ⊢ B
+  → Subst Δ (Γ , B) Γ
+subst-zero N Z      =  N
+subst-zero N (S x)  =  ` x
 
 _[_] : Δ ︔ (Γ , B) ⊢ A
      → Δ ︔ Γ ⊢ B
      → Δ ︔ Γ ⊢ A
-_[_] {Δ} {Γ} {B} M N = subst σ M
-  where
-  σ : ∀ {A} → Γ , B ∋ A → Δ ︔ Γ ⊢ A
-  σ Z      =  N 
-  σ (S x)  =  ` x  
+M [ N ] = M ⟪ subst-zero N ⟫
+
+MSubst : Cxt → Cxt → Cxt → Set
+MSubst Γ Δ Δ′ = Subst Δ′ Δ Γ
 
 mexts
-  : Subst Δ′       Δ       Γ
-  → Subst (Δ′ , A) (Δ , A) Γ
+  : MSubst Γ Δ Δ′
+  → MSubst Γ (Δ , A) (Δ′ , A) 
 mexts σ Z     = ᵒ Z
 mexts σ (S x) = mwk (σ x)
 
-msubst : Subst Δ′ Δ ∅
-  → Δ  ︔ Γ ⊢ A
+_m⟪_⟫
+  : Δ  ︔ Γ ⊢ A
+  → MSubst ∅ Δ Δ′
   → Δ′ ︔ Γ ⊢ A
-msubst σ (` x)      = ` x
-msubst σ (ᵒ x)      = ↑ (σ x)
-msubst σ (ƛ M)      = ƛ msubst σ M
-msubst σ (M · N)    = msubst σ M · msubst σ N
-msubst σ ⟨⟩         = ⟨⟩
-msubst σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
-msubst σ (proj₁ M)  = proj₁ msubst σ M
-msubst σ (proj₂ M)  = proj₂ msubst σ M
-msubst σ (mlet L M) = mlet (msubst σ L) (msubst (mexts σ) M)
-msubst σ ⌜ M ⌝      = ⌜ msubst σ M ⌝
+(` x)      m⟪ σ ⟫ = ` x
+(ᵒ x)      m⟪ σ ⟫ = ↑ (σ x)
+(ƛ M)      m⟪ σ ⟫ = ƛ M m⟪ σ ⟫
+(M · N)    m⟪ σ ⟫ = M m⟪ σ ⟫ · N m⟪ σ ⟫
+⟨⟩         m⟪ σ ⟫ = ⟨⟩
+⟨ M , N ⟩  m⟪ σ ⟫ = ⟨ M m⟪ σ ⟫ , N m⟪ σ ⟫ ⟩
+(proj₁ M)  m⟪ σ ⟫ = proj₁ M m⟪ σ ⟫
+(proj₂ M)  m⟪ σ ⟫ = proj₂ M m⟪ σ ⟫
+(mlet L M) m⟪ σ ⟫ = mlet (L m⟪ σ ⟫) (M m⟪ mexts σ ⟫)
+⌜ M ⌝      m⟪ σ ⟫ = ⌜ M m⟪ σ ⟫ ⌝
+
+msubst-zero 
+  : Δ ︔ ∅ ⊢ B
+  → MSubst ∅ (Δ , B) Δ 
+msubst-zero N Z      = N
+msubst-zero N (S x)  = ᵒ x
 
 _m[_]
   : Δ , B ︔ Γ ⊢ A
   → Δ ︔ ∅ ⊢ B
   → Δ ︔ Γ ⊢ A
-_m[_] {Δ} {B} {Γ} M N = msubst σ M
-  where
-    σ : Subst Δ (Δ , B) ∅
-    σ Z      = N 
-    σ (S x)  = ᵒ x
+M m[ N ] = M m⟪ msubst-zero N ⟫
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
@@ -241,7 +249,7 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
     : Δ ︔ Γ ⊢ N -→ N′ 
       ---------------
     → Δ ︔ Γ ⊢ ⟨ M , N ⟩ -→ ⟨ M , N′ ⟩
-
+    
   ξ-proj₁
     : Δ ︔ Γ ⊢ M -→ M′
     → Δ ︔ Γ ⊢ proj₁ M -→ proj₁ M′
