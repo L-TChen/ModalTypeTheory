@@ -30,16 +30,19 @@ private
 -- Translation from Dual to Kripke
 
 d2k : Δ ︔ Γ ⊢ A → □Subst Δ (Ψ , Γ) → Ψ , Γ ⊢ A
-d2k (` x) σ = ` x
-d2k (ƛ M) σ = ƛ d2k M (K.rename₁ S_ ∘ σ)
-d2k (M · N) σ = d2k M σ · d2k N σ
-d2k ⟨⟩ σ = ⟨⟩
-d2k ⟨ M , N ⟩ σ = ⟨ d2k M σ , d2k N σ ⟩
-d2k (proj₁ M) σ = proj₁ d2k M σ
-d2k (proj₂ M) σ = proj₂ d2k M σ
-d2k ⌜ M ⌝ σ = ⌜ K.subst₁ (⌞_⌟ ∘ σ) (d2k M (λ ())) ⌝
+d2k (` x)      σ = ` x
+d2k (ƛ M)      σ = ƛ d2k M (K.rename₁ S_ ∘ σ)
+d2k (M · N)    σ = d2k M σ · d2k N σ
+d2k ⟨⟩         σ = ⟨⟩
+d2k ⟨ M , N ⟩  σ = ⟨ d2k M σ , d2k N σ ⟩
+d2k (proj₁ M)  σ = proj₁ d2k M σ
+d2k (proj₂ M)  σ = proj₂ d2k M σ
+d2k ⌜ M ⌝      σ = ⌜ K.subst₁ (⌞_⌟ ∘ σ) (d2k M (λ ())) ⌝
 d2k (mlet M N) σ = d2k N (λ { Z → d2k M σ ; (S x) → σ x })
 
+
+------------------------------------------------------------------------------
+-- Renaming functions
 
 ⧺-∋-case : {P : Type → Set} → (∀ {A} → Δ ∋ A → P A) → (∀ {A} → Δ' ∋ A → P A) → (∀ {A} → (Δ ⧺ Δ') ∋ A → P A)
 ⧺-∋-case {Δ' = Δ'} σ σ' x with ⧺-∋ Δ' x
@@ -67,23 +70,23 @@ extₗ Δ ρ = ⧺-∋-case ∋-⧺⁺ˡ (∋-⧺⁺ʳ Δ ∘ ρ)
 bind : Δ ︔ Γ ⊢ A → □Subst Δ (Ψ , Γ) → ∃[ Δ' ] (∅ ︔ Δ' ⧺ Γ ⊢ A × □Subst Δ' Ψ)
 k2d : Ψ , Γ ⊢ A → ∃[ Δ ] (∅ ︔ Δ ⧺ Γ ⊢ A × □Subst Δ Ψ)
 
-bind {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
+bind {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ ∅) N ، (λ ())
 bind {Δ = Δ , B} {Γ = Γ} N σ with k2d (σ Z)
-... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (K.rename₁ (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.m↑ M₁) (D.rename (∋-⧺⁺ʳ Δ₁) N)) (K.rename₁ (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
 k2d (ƛ M) with k2d M
 ... | Δ ، M' ، σ = Δ ، ƛ M' ، σ
 k2d {Γ = Γ} (M₁ · M₂) with k2d M₁ | k2d M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) M₂' ، ⧺-∋-case σ₁ σ₂
 k2d ⟨⟩ = ∅ ، ⟨⟩ ، (λ ())
 k2d {Γ = Γ} ⟨ M₁ , M₂ ⟩ with k2d M₁ | k2d M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
 k2d (proj₁ M) with k2d M
-... |  Δ ، M' ، σ = Δ ، proj₁ M' ، σ
+... | Δ ، M' ، σ = Δ ، proj₁ M' ، σ
 k2d (proj₂ M) with k2d M
-... |  Δ ، M' ، σ = Δ ، proj₂ M' ، σ
+... | Δ ، M' ، σ = Δ ، proj₂ M' ، σ
 k2d ⌜ M ⌝ with k2d M
 ... | Δ ، M' ، σ = bind ⌜ M' ⌝ σ
 k2d {A = A} ⌞ M ⌟ = (∅ , A) ، ` ∋-⧺⁺ˡ Z ، λ { Z → M }
@@ -109,9 +112,9 @@ rename₁' : (∀ {A} → Γ ∋ A → Δ ∋ A) → Ψ , Γ ⊢' A → Ψ , Δ 
 rename₁' ρ = rename' (K.ids , ρ)
 
 bind' : Δ ︔ Γ ⊢ A → □Subst' Δ (Ψ , Γ) → Ψ , Γ ⊢' A
-bind' {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
+bind' {Δ = ∅}             N σ = ∅ ، D.rename (∋-⧺⁺ʳ ∅) N ، (λ ())
 bind' {Δ = Δ , B} {Γ = Γ} N σ with σ Z
-... | Δ₁ ، M₁ ، σ₁ with bind' {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (rename₁' (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind' {Γ = Δ₁ ⧺ Γ} (mlet (D.m↑ M₁) (D.rename (∋-⧺⁺ʳ Δ₁) N)) (rename₁' (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d' : Ψ , Γ ⊢ A → Ψ , Γ ⊢' A
@@ -119,10 +122,10 @@ k2d' (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
 k2d' (ƛ M) with k2d' M
 ... | Δ ، M' ، σ = Δ ، ƛ M' ، σ
 k2d' {Γ = Γ} (M₁ · M₂) with k2d' M₁ | k2d' M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) M₂' ، ⧺-∋-case σ₁ σ₂
 k2d' ⟨⟩ = ∅ ، ⟨⟩ ، (λ ())
 k2d' {Γ = Γ} ⟨ M₁ , M₂ ⟩ with k2d' M₁ | k2d' M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ _)) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
 k2d' (proj₁ M) with k2d' M
 ... |  Δ ، M' ، σ = Δ ، proj₁ M' ، σ
 k2d' (proj₂ M) with k2d' M
