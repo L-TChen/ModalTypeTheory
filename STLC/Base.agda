@@ -15,7 +15,7 @@ infixr 5 ƛ_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
-infixl 8 _[_]
+infixl 8 _[_] _⟪_⟫
 infix  9 `_ #_
 
 data _⊢_ (Γ : Cxt) : Type → Set
@@ -85,26 +85,28 @@ exts
 exts σ Z     = ` Z
 exts σ (S p) = rename S_ (σ p)
 
-subst
-  : Subst Γ Γ′
-  → Γ  ⊢ A
+_⟪_⟫
+  : Γ  ⊢ A
+  → Subst Γ Γ′
   → Γ′ ⊢ A
-subst σ (` x)      = σ x
-subst σ (ƛ M)      = ƛ subst (exts σ) M
-subst σ (M · N)    = subst σ M · subst σ N
-subst σ ⟨⟩         = ⟨⟩
-subst σ ⟨ M , N ⟩  = ⟨ subst σ M , subst σ N ⟩
-subst σ (proj₁ M)  = proj₁ subst σ M
-subst σ (proj₂ N)  = proj₂ subst σ N
+(` x)     ⟪ σ ⟫ = σ x
+(ƛ M)     ⟪ σ ⟫ = ƛ M ⟪ exts σ ⟫
+(M · N)   ⟪ σ ⟫ = M ⟪ σ ⟫ · N ⟪ σ ⟫
+⟨⟩        ⟪ σ ⟫ = ⟨⟩
+⟨ M , N ⟩ ⟪ σ ⟫ = ⟨ M ⟪ σ ⟫ , N ⟪ σ ⟫ ⟩
+(proj₁ M) ⟪ σ ⟫ = proj₁ M ⟪ σ ⟫
+(proj₂ M) ⟪ σ ⟫ = proj₂ M ⟪ σ ⟫
+
+subst-zero
+  : Γ ⊢ B
+  → Subst (Γ , B) Γ
+subst-zero N Z     = N
+subst-zero N (S x) = ` x
 
 _[_] : Γ , B ⊢ A
      → Γ ⊢ B
      → Γ ⊢ A
-_[_] {Γ} {B} M N = subst σ M
-  where
-  σ : ∀ {A} → Γ , B ∋ A → Γ ⊢ A
-  σ Z      =  N 
-  σ (S x)  =  ` x  
+_[_] {Γ} {B} M N = M ⟪ subst-zero N ⟫
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
@@ -145,12 +147,12 @@ data _⊢_-→_ (Γ : Cxt) : (M N : Γ ⊢ A) → Set where
     → Γ ⊢ ⟨ M , N ⟩ -→ ⟨ M , N′ ⟩
 
   ξ-proj₁
-    : Γ ⊢ M -→ M′
-    → Γ ⊢ proj₁ M -→ proj₁ M′
+    : Γ ⊢ L -→ L′
+    → Γ ⊢ proj₁ L -→ proj₁ L′
 
   ξ-proj₂
-    : Γ ⊢ M -→ M′
-    → Γ ⊢ proj₂ M -→ proj₂ M′
+    : Γ ⊢ L -→ L′
+    → Γ ⊢ proj₂ L -→ proj₂ L′
 
 ------------------------------------------------------------------------------
 -- Multi-step beta-reduction
@@ -224,3 +226,77 @@ progress (proj₁ MN) with progress MN
 progress (proj₂ MN) with progress MN
 ... | step M-→N      = step (ξ-proj₂ M-→N)
 ... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
+
+------------------------------------------------------------------------------
+-- Multi-step reduction is a congruence
+
+ƛ-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ ƛ M -↠ ƛ M′
+ƛ-↠ (M ∎)                 = ƛ M ∎
+ƛ-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
+  ƛ M -→⟨ ξ-ƛ M→M₁ ⟩ ƛ-↠ M₁-↠M₂
+
+·₁-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ M · N -↠ M′ · N
+·₁-↠ (M ∎)                 = M · _ ∎
+·₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
+  M · _ -→⟨ ξ-·₁ M→M₁ ⟩ ·₁-↠ M₁-↠M₂
+
+·₂-↠
+  : _ ⊢ N -↠ N′
+  → _ ⊢ M · N -↠ M · N′
+·₂-↠ (N ∎)                 = _ · N ∎
+·₂-↠ (N -→⟨ N→N₁ ⟩ N₁-↠N₂) =
+  _ · N -→⟨ ξ-·₂ N→N₁ ⟩ ·₂-↠ N₁-↠N₂
+
+·-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ N -↠ N′
+  → _ ⊢ M · N -↠ M′ · N′
+·-↠ M-↠M′ N-↠N′ = begin
+  _ · _
+    -↠⟨ ·₁-↠ M-↠M′ ⟩
+  _ · _
+    -↠⟨ ·₂-↠ N-↠N′ ⟩
+  _ · _ ∎ 
+
+proj₁-↠
+  : _ ⊢ L -↠ L′ → _ ⊢ proj₁ L -↠ proj₁ L′
+proj₁-↠ (L ∎)                 = proj₁ L ∎
+proj₁-↠ (L -→⟨ L→L₁ ⟩ L₁-↠L₂) =
+  proj₁ L -→⟨ ξ-proj₁ L→L₁ ⟩ proj₁-↠ L₁-↠L₂
+
+proj₂-↠
+  : _ ⊢ L -↠ L′
+  → _ ⊢ proj₂ L -↠ proj₂ L′
+proj₂-↠ (L ∎)                 = proj₂ L ∎
+proj₂-↠ (L -→⟨ L→L₂ ⟩ L₂-↠L₂) =
+  proj₂ L -→⟨ ξ-proj₂ L→L₂ ⟩ proj₂-↠ L₂-↠L₂
+
+⟨,⟩₁-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ ⟨ M , N ⟩ -↠ ⟨ M′ , N ⟩
+⟨,⟩₁-↠ (M ∎)                 = ⟨ M , _ ⟩ ∎
+⟨,⟩₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
+  ⟨ M , _ ⟩ -→⟨ ξ-⟨,⟩₁ M→M₁ ⟩ ⟨,⟩₁-↠ M₁-↠M₂
+
+⟨,⟩₂-↠
+  : _ ⊢ N -↠ N′
+  → _ ⊢ ⟨ M , N ⟩ -↠ ⟨ M , N′ ⟩
+⟨,⟩₂-↠ (N ∎)                 = ⟨ _ , N ⟩ ∎
+⟨,⟩₂-↠ (N -→⟨ N→N₁ ⟩ N₁-↠N₂) =
+  ⟨ _ , N ⟩ -→⟨ ξ-⟨,⟩₂ N→N₁ ⟩ ⟨,⟩₂-↠ N₁-↠N₂
+
+⟨,⟩-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ N -↠ N′
+  → _ ⊢ ⟨ M , N ⟩ -↠ ⟨ M′ , N′ ⟩
+⟨,⟩-↠ M↠M′ N↠N′ = begin
+  ⟨ _ , _ ⟩
+    -↠⟨ ⟨,⟩₁-↠ M↠M′ ⟩
+  ⟨ _ , _ ⟩
+    -↠⟨ ⟨,⟩₂-↠ N↠N′ ⟩
+  ⟨ _ , _ ⟩
+    ∎
