@@ -6,7 +6,7 @@ open import Data.Sum hiding (map)
 open import Data.Product using (∃-syntax; _×_) renaming (_,_ to _،_)
 open import Data.Empty
 open import Function hiding (_∋_)
-
+open import Relation.Binary.PropositionalEquality as P using (_≡_)
 open import Kripke.IK as K using (_⊢_)
 open import Dual.IK   as D using (_︔_⊢_)
 open _⊢_
@@ -133,3 +133,45 @@ k2d' (proj₂ M) with k2d' M
 k2d' ⌜ M ⌝ with k2d' M
 ... | Δ ، M' ، σ = bind' ⌜ M' ⌝ σ
 k2d' {A = A} ⌞ M ⌟ = (∅ , A) ، ` ∋-⧺⁺ˡ Z ، λ { Z → k2d' M }
+
+
+------------------------------------------------------------------------------
+-- Examples
+
+kripkeK : ∅ , ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
+kripkeK = ƛ ƛ ⌜ ⌞ ` S Z ⌟ · ⌞ ` Z ⌟ ⌝
+
+dualK : ∅ ︔ ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
+dualK = ƛ ƛ mlet (` S Z) (mlet (` Z) ⌜ ` S Z · ` Z ⌝)
+-- check₁ fails , check₂ passes
+-- dualK = ƛ ƛ mlet (` Z) (mlet (` S Z) ⌜ ` Z · ` S Z ⌝)
+
+check₁ : k2d (kripkeK {A} {B}) ≡ (∅ ، dualK {A} {B} ، λ ())
+check₁ = P.refl
+
+check₂ : d2k (dualK {A} {B}) (λ ()) ≡ kripkeK {A} {B}
+check₂ = P.refl
+
+kripke□×̇ : ∅ , ∅ ⊢ □ (A ×̇ B) →̇ (□ A ×̇ □ B)
+kripke□×̇ = ƛ ⟨ ⌜ proj₁ ⌞ ` Z ⌟ ⌝ , ⌜ proj₂ ⌞ ` Z ⌟ ⌝ ⟩
+
+dual□×̇ : ∅ ︔ ∅ ⊢ □ (A ×̇ B) →̇ (□ A ×̇ □ B)
+dual□×̇ = ƛ ⟨ mlet (` Z) ⌜ proj₁ ` Z ⌝ , mlet (` Z) ⌜ proj₂ ` Z ⌝ ⟩
+
+check₃ : k2d (kripke□×̇ {A} {B}) ≡ (∅ ، dual□×̇ {A} {B} ، λ ())
+check₃ = P.refl
+
+check₄ : d2k (dual□×̇ {A} {B}) (λ ()) ≡ kripke□×̇ {A} {B}
+check₄ = P.refl
+
+kripke×̇□ : ∅ , ∅ ⊢ (□ A ×̇ □ B) →̇ □ (A ×̇ B)
+kripke×̇□ = ƛ ⌜ ⟨ ⌞ proj₁ ` Z ⌟ , ⌞ proj₂ ` Z ⌟ ⟩ ⌝
+
+dual×̇□ : ∅ ︔ ∅ ⊢ (□ A ×̇ □ B) →̇ □ (A ×̇ B)
+dual×̇□ = ƛ mlet (proj₁ ` Z) ( mlet (proj₂ ` Z) ⌜ ⟨ ` S Z , ` Z ⟩ ⌝)
+
+check₅ : k2d (kripke×̇□ {A} {B}) ≡ (∅ ، dual×̇□ {A} {B} ، λ ())
+check₅ = P.refl
+
+check₆ : d2k (dual×̇□ {A} {B}) (λ ()) ≡ kripke×̇□ {A} {B}
+check₆ = P.refl
