@@ -9,6 +9,7 @@ open import Function
   hiding (_∋_)
 
 open import Context
+  renaming (ext to ext₁)
   hiding ([_])
 
 open import Relation.Binary.PropositionalEquality as P using (_≡_)
@@ -114,18 +115,13 @@ prefixRename {Ξ⁺ = Ξ⁺} Z ρs = Ξ⁺ , (Z , ρs)
 prefixRename (S n) (ρs , ρ) with prefixRename n ρs
 ... | Ξ′ , (n′ , ρs′) = Ξ′ , (S n′ , ρs′)
 
-ext' : Rename Ψ Ξ → Rename (Ψ , Γ) (Ξ , Γ)
-ext' Ρ = Ρ , λ x → x
+ext : Rename (Ψ , Γ)       (Ξ , Δ)
+    → Rename (Ψ , (Γ , B)) (Ξ , (Δ , B))
+ext (ρs , ρ) = ρs , ext₁ ρ
 
-ids : Rename Ψ Ψ
-ids {Ψ = ∅} = ∅
-ids {Ψ = Ψ , Γ} = ids , (λ z → z)
-
-rename : Rename Ψ Ξ
-  → Ψ ⊢ A
-  → Ξ ⊢ A
+rename : Rename Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
 rename    (_  , ρ) (` x)     = ` ρ x
-rename    (ρs , ρ) (ƛ M)     = ƛ rename (ρs , ext ρ) M
+rename ρs@(_  , _) (ƛ M)     = ƛ rename (ext ρs) M
 rename ρs@(_  , _) (M · N)   = rename ρs M · rename ρs N
 rename    (_  , _) ⟨⟩        = ⟨⟩
 rename ρs@(_  , _) ⟨ M , N ⟩ = ⟨ rename ρs M , rename ρs N ⟩
@@ -133,7 +129,14 @@ rename ρs@(_  , _) (proj₁ M) = proj₁ rename ρs M
 rename ρs@(_  , _) (proj₂ M) = proj₂ rename ρs M
 rename    (ρs , _) (unbox n M) with prefixRename n ρs
 ... | Ξ′ , (n′ , ρs′) = unbox n′ (rename ρs′ M)
-rename ρs@(_  , _) (mfix M)  = mfix (rename  (ρs , id) M)
+rename ρs@(_  , _) (mfix M)  = mfix (rename (ρs , id) M)
+
+ids : Rename Ψ Ψ
+ids {Ψ = ∅} = ∅
+ids {Ψ = Ψ , Γ} = ids , (λ z → z)
+
+rename₁ : (∀ {A} → Γ ∋ A → Δ ∋ A) → Ψ , Γ ⊢ A → Ψ , Δ ⊢ A
+rename₁ ρ = rename (ids , ρ)
 
 data Subst : Cxts → Cxts → Set where
   ∅ : Subst ∅ Ξ
@@ -147,24 +150,18 @@ prefixSubst {Ξ⁺ = Ξ⁺} Z σs = Ξ⁺ , (Z , σs)
 prefixSubst (S n) (σs , σ) with prefixSubst n σs
 ... | Ξ′ , (n′ , σs′) = Ξ′ , (S n′ , σs′)
 
-exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
-  → Γ , B       ∋ A
-  → Ψ , (Δ , B) ⊢ A
-exts σ Z     = ` Z
-exts σ (S p) = rename (ids , S_) (σ p)
+exts₁
+  : (∀ {A} → Γ     ∋ A → Ψ ,  Δ      ⊢ A)
+  → (∀ {A} → Γ , B ∋ A → Ψ , (Δ , B) ⊢ A)
+exts₁ σ Z     = ` Z
+exts₁ σ (S x) = rename₁ S_ (σ x)
 
-exts' : Subst Ψ Ξ → Subst (Ψ , Γ) (Ξ , Γ)
-exts' Σ = Σ , `_
+exts : Subst (Ψ , Γ) (Ξ , Δ) → Subst (Ψ , (Γ , B)) (Ξ , (Δ , B))
+exts (σs , σ) = σs , exts₁ σ
 
-`s : Subst Ψ Ψ
-`s {Ψ = ∅} = ∅
-`s {Ψ = Ψ , Γ} = `s , `_
-
-subst : Subst Ψ Ξ
-  → Ψ ⊢ A
-  → Ξ ⊢ A
+subst : Subst Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
 subst    (_  , σ) (` x)     = σ x
-subst    (σs , σ) (ƛ M)     = ƛ subst (σs , exts σ) M
+subst σs@(_  , _) (ƛ M)     = ƛ subst (exts σs) M
 subst σs@(_  , _) (M · N)   = subst σs M · subst σs N
 subst    (_  , _) ⟨⟩        = ⟨⟩
 subst σs@(_  , _) ⟨ M , N ⟩ = ⟨ subst σs M , subst σs N ⟩
@@ -172,12 +169,19 @@ subst σs@(_  , _) (proj₁ M) = proj₁ subst σs M
 subst σs@(_  , _) (proj₂ M) = proj₂ subst σs M
 subst    (σs , _) (unbox n M) with prefixSubst n σs
 ... | Ξ′ , (n′ , σs′) = unbox n′ (subst σs′ M)
-subst σs@(_  , _) (mfix M)  = mfix (subst (exts' σs) M)
+subst σs@(_  , _) (mfix M)  = mfix (subst (σs , `_) M)
+
+`s : Subst Ψ Ψ
+`s {Ψ = ∅} = ∅
+`s {Ψ = Ψ , Γ} = `s , `_
+
+subst₁ : (∀ {A} → Γ ∋ A → Ψ , Δ ⊢ A) → Ψ , Γ ⊢ A → Ψ , Δ ⊢ A
+subst₁ σ = subst (`s , σ)
 
 _[_] : Ψ , (Γ , B) ⊢ A
      → Ψ , Γ ⊢ B
      → Ψ , Γ ⊢ A
-N [ M ] = subst (`s , λ { Z → M ; (S x) → ` x }) N
+N [ M ] = subst₁ (λ { Z → M ; (S x) → ` x }) N
 
 ------------------------------------------------------------------------------
 -- Label Substitution
@@ -206,12 +210,12 @@ labelSubst Ξ (S n) (mfix M) = mfix labelSubst (Ξ , _) (S n) M
 wk
   : Ψ , Γ₀ ⊢ A
   → Ψ , (Γ₀ , B) ⊢ A
-wk = rename (ids , S_)
+wk = rename₁ S_
 
 ↑_ : Ψ , ∅ ⊢ A
      ---------
    → Ψ , Γ ⊢ A
-↑ M = rename (ids , λ ()) M
+↑ M = rename₁ (λ ()) M
 
 ------------------------------------------------------------------------------
 -- □ intro by GL

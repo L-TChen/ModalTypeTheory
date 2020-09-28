@@ -5,7 +5,9 @@
 module Kripke.IK where
 
 open import Data.Nat
-open import Context hiding ([_])
+open import Context
+  renaming (ext to ext₁)
+  hiding ([_])
 
 infix  3 _⊢_
 
@@ -89,61 +91,68 @@ data Rename : Cxts → Cxts → Set where
   ∅ : Rename ∅ Ξ
   _,_ : Rename Ψ Ξ → ({A : Type} → Γ ∋ A → Δ ∋ A) → Rename (Ψ , Γ) (Ξ , Δ)
 
-ext' : Rename Ψ Ξ → Rename (Ψ , Γ) (Ξ , Γ)
-ext' Ρ = Ρ , λ x → x
+ext : Rename (Ψ ,  Γ)      (Ξ ,  Δ)
+    → Rename (Ψ , (Γ , B)) (Ξ , (Δ , B))
+ext (ρs , ρ) = ρs , ext₁ ρ
+
+rename : Rename Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
+rename                    (_  , ρ) (` x)     = ` ρ x
+rename                 ρs@(_  , _) (ƛ M)     = ƛ rename (ext ρs) M
+rename                 ρs@(_  , _) (M · N)   = rename ρs M · rename ρs N
+rename                    (_  , _) ⟨⟩        = ⟨⟩
+rename                 ρs@(_  , _) ⟨ M , N ⟩ = ⟨ rename ρs M , rename ρs N ⟩
+rename                 ρs@(_  , _) (proj₁ M) = proj₁ rename ρs M
+rename                 ρs@(_  , _) (proj₂ M) = proj₂ rename ρs M
+rename                 ρs@(_  , _) ⌜ M ⌝     = ⌜ rename (ρs , (λ x → x)) M ⌝
+rename {Ξ = _ , _ , _}    (ρs , _) ⌞ M ⌟     = ⌞ rename ρs M ⌟
 
 ids : Rename Ψ Ψ
 ids {Ψ = ∅} = ∅
 ids {Ψ = Ψ , Γ} = ids , (λ z → z)
 
-rename : Rename Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
-rename                 (Ρ , ρ) (` x)     = ` ρ x
-rename                 (Ρ , ρ) (ƛ M)     = ƛ rename (Ρ , ext ρ) M
-rename                 (Ρ , ρ) (M · N)   = rename (Ρ , ρ) M · rename (Ρ , ρ) N
-rename                 (Ρ , ρ) ⟨⟩        = ⟨⟩
-rename                 (Ρ , ρ) ⟨ M , N ⟩ = ⟨ rename (Ρ , ρ) M , rename (Ρ , ρ) N ⟩
-rename                 (Ρ , ρ) (proj₁ M) = proj₁ rename (Ρ , ρ) M
-rename                 (Ρ , ρ) (proj₂ M) = proj₂ rename (Ρ , ρ) M
-rename                 (Ρ , ρ) ⌜ M ⌝     = ⌜ rename (Ρ , ρ , (λ x → x)) M ⌝
-rename {Ξ = _ , _ , _} (Ρ , ρ) ⌞ M ⌟     = ⌞ rename Ρ M ⌟
+rename₁ : (∀ {A} → Γ ∋ A → Δ ∋ A) → Ψ , Γ ⊢ A → Ψ , Δ ⊢ A
+rename₁ ρ = rename (ids , ρ)
 
 data Subst : Cxts → Cxts → Set where
   ∅ : Subst ∅ Ξ
   _,_ : Subst Ψ Ξ → ({A : Type} → Γ ∋ A → Ξ , Δ ⊢ A) → Subst (Ψ , Γ) (Ξ , Δ)
 
-exts : ({A : Type} → Γ ∋ A → Ψ , Δ ⊢ A)
-  → Γ , B       ∋ A
-  → Ψ , (Δ , B) ⊢ A
-exts σ Z     = ` Z
-exts σ (S p) = rename (ids , S_) (σ p)
+exts₁
+  : (∀ {A} → Γ     ∋ A → Ψ ,  Δ      ⊢ A)
+  → (∀ {A} → Γ , B ∋ A → Ψ , (Δ , B) ⊢ A)
+exts₁ σ Z     = ` Z
+exts₁ σ (S x) = rename₁ S_ (σ x)
 
-exts' : Subst Ψ Ξ → Subst (Ψ , Γ) (Ξ , Γ)
-exts' Σ = Σ , `_
+exts : Subst (Ψ , Γ) (Ξ , Δ) → Subst (Ψ , (Γ , B)) (Ξ , (Δ , B))
+exts (σs , σ) = σs , exts₁ σ
+
+subst : Subst Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
+subst                    (_  , σ) (` x)     = σ x
+subst                 σs@(_  , _) (ƛ M)     = ƛ subst (exts σs) M
+subst                 σs@(_  , _) (M · N)   = subst σs M · subst σs N
+subst                    (_  , _) ⟨⟩        = ⟨⟩
+subst                 σs@(_  , _) ⟨ M , N ⟩ = ⟨ subst σs M , subst σs N ⟩
+subst                 σs@(_  , _) (proj₁ M) = proj₁ subst σs M
+subst                 σs@(_  , _) (proj₂ M) = proj₂ subst σs M
+subst                 σs@(_  , _) ⌜ M ⌝     = ⌜ subst (σs , `_) M ⌝
+subst {Ξ = _ , _ , _}    (σs , _) ⌞ M ⌟     = ⌞ subst σs M ⌟
 
 `s : Subst Ψ Ψ
 `s {Ψ = ∅} = ∅
 `s {Ψ = Ψ , Γ} = `s , `_
 
-subst : Subst Ψ Ξ → Ψ ⊢ A → Ξ ⊢ A
-subst                 (Σ , σ) (` x)     = σ x
-subst                 (Σ , σ) (ƛ M)     = ƛ subst (Σ , exts σ) M
-subst                 (Σ , σ) (M · N)   = subst (Σ , σ) M · subst (Σ , σ) N
-subst                 (Σ , σ) ⟨⟩        = ⟨⟩
-subst                 (Σ , σ) ⟨ M , N ⟩ = ⟨ subst (Σ , σ) M , subst (Σ , σ) N ⟩
-subst                 (Σ , σ) (proj₁ M) = proj₁ subst (Σ , σ) M
-subst                 (Σ , σ) (proj₂ M) = proj₂ subst (Σ , σ) M
-subst                 (Σ , σ) ⌜ M ⌝     = ⌜ subst (exts' (Σ , σ)) M ⌝
-subst {Ξ = _ , _ , _} (Σ , σ) ⌞ M ⌟     = ⌞ subst Σ M ⌟
+subst₁ : (∀ {A} → Γ ∋ A → Ψ , Δ ⊢ A) → Ψ , Γ ⊢ A → Ψ , Δ ⊢ A
+subst₁ σ = subst (`s , σ)
 
 _[_] : Ψ , (Γ , B) ⊢ A
      → Ψ , Γ ⊢ B
      → Ψ , Γ ⊢ A
-N [ M ] = subst (`s , λ { Z → M ; (S x) → ` x }) N
+N [ M ] = subst₁ (λ { Z → M ; (S x) → ` x }) N
 
 ↑_
   : Ψ , ∅ ⊢ A
   → Ψ , Γ ⊢ A
-↑ M = subst (`s , λ ()) M
+↑ M = subst₁ (λ ()) M
 
 ------------------------------------------------------------------------------
 -- Single-step reduction

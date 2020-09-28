@@ -39,13 +39,13 @@ UnboxSubst Δ Ψ = ∀ {A} → Δ ∋ A → Unbox Ψ A
 
 d2k : Δ ︔ Γ ⊢ A → UnboxSubst Δ (Ψ , Γ) → Ψ , Γ ⊢ A
 d2k (` x) σ = ` x
-d2k (ƛ M) σ = ƛ d2k M (λ x → renameUnbox (K.ids , S_) (σ x))
+d2k (ƛ M) σ = ƛ d2k M (renameUnbox (K.ids , S_) ∘ σ)
 d2k (M · N) σ = d2k M σ · d2k N σ
 d2k ⟨⟩ σ = ⟨⟩
 d2k ⟨ M , N ⟩ σ = ⟨ d2k M σ , d2k N σ ⟩
 d2k (proj₁ M) σ = proj₁ d2k M σ
 d2k (proj₂ M) σ = proj₂ d2k M σ
-d2k (mfix M) σ = mfix (K.subst (K.`s , λ { Z → ` Z; (S x) → runUnbox (σ x) }) (d2k M (λ x → liftUnbox (σ x))))
+d2k (mfix M) σ = mfix K.subst (K.`s , λ { Z → ` Z; (S x) → runUnbox (σ x) }) (d2k M (liftUnbox ∘ σ))
 d2k (mlet M N) σ = d2k N (λ { Z → unbox Z (d2k M σ) ; (S x) → σ x })
 
 ⧺-∋-case : {P : Type → Set} → (∀ {A} → Δ ∋ A → P A) → (∀ {A} → Δ' ∋ A → P A) → (∀ {A} → (Δ ⧺ Δ') ∋ A → P A)

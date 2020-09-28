@@ -31,13 +31,13 @@ private
 
 d2k : Δ ︔ Γ ⊢ A → □Subst Δ (Ψ , Γ) → Ψ , Γ ⊢ A
 d2k (` x) σ = ` x
-d2k (ƛ M) σ = ƛ d2k M (λ x → K.rename (K.ids , S_) (σ x))
+d2k (ƛ M) σ = ƛ d2k M (K.rename₁ S_ ∘ σ)
 d2k (M · N) σ = d2k M σ · d2k N σ
 d2k ⟨⟩ σ = ⟨⟩
 d2k ⟨ M , N ⟩ σ = ⟨ d2k M σ , d2k N σ ⟩
 d2k (proj₁ M) σ = proj₁ d2k M σ
 d2k (proj₂ M) σ = proj₂ d2k M σ
-d2k ⌜ M ⌝ σ = ⌜ K.subst (K.`s , ⌞_⌟ ∘ σ) (d2k M (λ ())) ⌝
+d2k ⌜ M ⌝ σ = ⌜ K.subst₁ (⌞_⌟ ∘ σ) (d2k M (λ ())) ⌝
 d2k (mlet M N) σ = d2k N (λ { Z → d2k M σ ; (S x) → σ x })
 
 
@@ -69,7 +69,7 @@ k2d : Ψ , Γ ⊢ A → ∃[ Δ ] (∅ ︔ Δ ⧺ Γ ⊢ A × □Subst Δ Ψ)
 
 bind {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
 bind {Δ = Δ , B} {Γ = Γ} N σ with k2d (σ Z)
-... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (K.rename (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (K.rename₁ (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
@@ -105,10 +105,13 @@ _⊢'_ : Cxts → Type → Set
 rename' : K.Rename Ψ Ξ → (∀ {A} → Ψ ⊢' A → Ξ ⊢' A)
 rename' (ρs , ρ) (Δ ، M ، σ) = Δ ، D.rename (extₗ Δ ρ) M ، λ x → rename' ρs (σ x)
 
+rename₁' : (∀ {A} → Γ ∋ A → Δ ∋ A) → Ψ , Γ ⊢' A → Ψ , Δ ⊢' A
+rename₁' ρ = rename' (K.ids , ρ)
+
 bind' : Δ ︔ Γ ⊢ A → □Subst' Δ (Ψ , Γ) → Ψ , Γ ⊢' A
 bind' {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
 bind' {Δ = Δ , B} {Γ = Γ} N σ with σ Z
-... | Δ₁ ، M₁ ، σ₁ with bind' {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (rename' (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind' {Γ = Δ₁ ⧺ Γ} (mlet (D.mrename (λ ()) M₁) (D.rename (∋-⧺⁺ʳ _) N)) (rename₁' (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d' : Ψ , Γ ⊢ A → Ψ , Γ ⊢' A
