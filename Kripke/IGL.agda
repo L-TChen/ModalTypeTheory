@@ -192,18 +192,19 @@ labelSubst
   → (Ψ ⧺ Ξ) , Γ ⊢ A
     -------------
   → (Ψ⁺ ⧺ Ξ) , Γ ⊢ A
-labelSubst Ξ Z M = M
-labelSubst Ξ (S n) (unbox m M) with prefix-⧺⁻ Ξ m
-... | inj₁ x = unbox (prefix-trans (S prefix-trans x n) (prefix-⧺ᵣ Ξ)) M
-... | inj₂ (Ξ₁ , (Γ′ , (P.refl , m′))) = unbox (prefix-⧺ₗ _ m′) (labelSubst Ξ₁ (S n) M)
-labelSubst Ξ (S n) (` x) = ` x
-labelSubst Ξ (S n) (ƛ M) = ƛ labelSubst Ξ (S n) M
-labelSubst Ξ (S n) (M · N) = labelSubst Ξ (S n) M · labelSubst Ξ (S n) N
-labelSubst Ξ (S n) ⟨⟩ = ⟨⟩
-labelSubst Ξ (S n) ⟨ M , N ⟩ = ⟨ labelSubst Ξ (S n) M , labelSubst Ξ (S n) N ⟩
-labelSubst Ξ (S n) (proj₁ M) = proj₁ labelSubst Ξ (S n) M
-labelSubst Ξ (S n) (proj₂ M) = proj₂ labelSubst Ξ (S n) M
-labelSubst Ξ (S n) (mfix M) = mfix labelSubst (Ξ , _) (S n) M
+labelSubst Ξ m (` x)       = ` x
+labelSubst Ξ m (ƛ M)       = ƛ labelSubst Ξ m M
+labelSubst Ξ m (M · N)     = labelSubst Ξ m M · labelSubst Ξ m N
+labelSubst Ξ m ⟨⟩          = ⟨⟩
+labelSubst Ξ m ⟨ M , N ⟩   = ⟨ labelSubst Ξ m M , labelSubst Ξ m N ⟩
+labelSubst Ξ m (proj₁ M)   = proj₁ labelSubst Ξ m M
+labelSubst Ξ m (proj₂ M)   = proj₂ labelSubst Ξ m M
+labelSubst Ξ m (mfix M)    = mfix labelSubst (Ξ , _) m M
+labelSubst Ξ m (unbox k M) with prefix-⧺⁻ Ξ k
+-- length Ξ ≤ k  ,  k′ + length Ξ = k
+... | inj₁ k′                          = unbox (prefix-trans (prefix-trans k′ m) (prefix-⧺ᵣ Ξ)) M
+-- k > length Ξ  ,  k′ = k
+... | inj₂ (Ξ′ , (Γ′ , (P.refl , k′))) = unbox (prefix-⧺ₗ _ k′) (labelSubst Ξ′ m M)
 
 ------------------------------------------------------------------------------
 -- Structural rules
