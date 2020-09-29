@@ -11,7 +11,7 @@ open import Relation.Nullary
 
 open import Dual.IK4 as DB
   hiding (Cxt; _︔_⊢_; ƛ_; lookup)
-open import DisjointContext
+open import ShadowingMembership
 
 infix   3  _︔_⊢_⇒_
 infix   3  _︔_⊢_⇐_

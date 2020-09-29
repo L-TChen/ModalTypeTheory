@@ -11,7 +11,7 @@ open import Relation.Nullary
 
 open import STLC.Base as DB
   hiding (Cxt; _⊢_; ƛ_; lookup)
-open import DisjointContext
+open import ShadowingMembership
 
 infix   3  _⊢_⇒_
 infix   3  _⊢_⇐_

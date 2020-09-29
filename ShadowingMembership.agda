@@ -1,9 +1,9 @@
 {-# OPTIONS --without-K #-}
 
 ------------------------------------------------------------------------------
--- Mutually exclusive (snoc) list
+-- Membership relation which always picks the nearest occurrence 
 
-module DisjointContext where
+module ShadowingMembership where
 
 open import Data.Empty
 open import Data.Product as P
