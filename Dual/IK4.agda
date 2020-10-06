@@ -18,7 +18,7 @@ infixr 5 ƛ_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
-infixl 8 _[_] _m[_]
+infixl 8 _[_] _m[_] _⟪_︔_⟫
 infix  9 `_ #_
 
 data _︔_⊢_ : Cxt → Cxt → Type → Set
@@ -83,122 +83,86 @@ Four = ƛ mlet (# 0) ⌜ ⌜ # 0 ⌝ ⌝
 ------------------------------------------------------------------------------
 -- Substitution and structural rules 
 
-Rename : Cxt → Cxt → Set
-Rename Γ Γ′ = ∀ {A} → Γ ∋ A → Γ′ ∋ A
-
-rename : Rename Γ Γ′
-  → Δ ︔ Γ  ⊢ A
-  → Δ ︔ Γ′ ⊢ A
-rename ρ (` x)      = ` ρ x
-rename ρ (ƛ M)      = ƛ rename (ext ρ) M
-rename ρ (M · N)    = rename ρ M · rename ρ N
-rename ρ ⟨⟩         = ⟨⟩
-rename ρ ⟨ M , N ⟩  = ⟨ rename ρ M , rename ρ N ⟩
-rename ρ (proj₁ M)  = proj₁ rename ρ M
-rename ρ (proj₂ M)  = proj₂ rename ρ M
-rename ρ (mlet M N) = mlet (rename ρ M) (rename ρ N)
-rename ρ ⌜ M ⌝      = ⌜ M ⌝
-
-mrename : Rename Δ Δ′
-  → Δ  ︔ Γ ⊢ A
-  → Δ′ ︔ Γ ⊢ A
-mrename ρ (` x)      = ` x 
-mrename ρ (ƛ M)      = ƛ mrename ρ M
-mrename ρ (M · N)    = mrename ρ M · mrename ρ N
-mrename ρ ⟨⟩         = ⟨⟩
-mrename ρ ⟨ M , N ⟩  = ⟨ mrename ρ M , mrename ρ N ⟩
-mrename ρ (proj₁ M)  = proj₁ mrename ρ M
-mrename ρ (proj₂ N)  = proj₂ mrename ρ N
-mrename ρ (mlet L M) = mlet (mrename ρ L) (mrename (ext ρ) M)
-mrename ρ (⌜ M ⌝)    = ⌜ rename ρ (mrename ρ M) ⌝
-
 Subst : Cxt → Cxt → Cxt → Set
 Subst Δ Γ Γ′ = ∀ {A} → Γ ∋ A → Δ ︔ Γ′ ⊢ A
+
+MSubst : Cxt → Cxt → Set
+MSubst Δ Δ′ = Subst Δ′ Δ Δ′ 
+
+rename : Rename Γ Γ′
+  → Rename Δ Δ′
+  → Δ  ︔ Γ  ⊢ A
+  → Δ′ ︔ Γ′ ⊢ A
+rename ρ₁ ρ₂ (` x)      = ` ρ₁ x
+rename ρ₁ ρ₂ (ƛ M)      = ƛ rename (ext ρ₁) ρ₂ M
+rename ρ₁ ρ₂ (M · N)    = rename ρ₁ ρ₂ M · rename ρ₁ ρ₂ N
+rename ρ₁ ρ₂ ⟨⟩         = ⟨⟩
+rename ρ₁ ρ₂ ⟨ M , N ⟩  = ⟨ rename ρ₁ ρ₂ M , rename ρ₁ ρ₂ N ⟩
+rename ρ₁ ρ₂ (proj₁ L)  = proj₁ rename ρ₁ ρ₂ L
+rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
+rename ρ₁ ρ₂ (mlet N M) = mlet (rename ρ₁ ρ₂ N) (rename ρ₁ (ext ρ₂) M)
+rename ρ₁ ρ₂ ⌜ M ⌝      = ⌜ rename ρ₂ ρ₂ M ⌝
+
+wk₁ : Δ ︔ Γ ⊢ A
+    → Δ ︔ Γ , B ⊢ A
+wk₁ = rename S_ id
+
+mwk₁ : Δ     ︔ Γ ⊢ A
+     → Δ , B ︔ Γ ⊢ A
+mwk₁ = rename id S_
+
+m↑_ : ∅ ︔ Γ ⊢ A → Δ ︔ Γ ⊢ A
+m↑_ = rename id λ ()
+
+mwk
+  : ∀ Δ′ 
+  → Δ     ⧺ Δ′ ︔ Γ ⊢ A
+  → Δ , B ⧺ Δ′ ︔ Γ ⊢ A
+mwk Δ′ = rename id (∋-insert-inbetween Δ′)
 
 exts
   : Subst Δ Γ Γ′ 
   → Subst Δ (Γ , B) (Γ′ , B)
 exts σ Z     = ` Z
-exts σ (S p) = rename S_ (σ p)
-
-subst : Subst Δ Γ Γ′
-  → Δ ︔ Γ  ⊢ A
-  → Δ ︔ Γ′ ⊢ A
-subst σ (` x)      = σ x
-subst σ (ƛ M)      = ƛ subst (exts σ) M
-subst σ (M · N)    = subst σ M · subst σ N
-subst σ ⟨⟩         = ⟨⟩
-subst σ ⟨ M , N ⟩  = ⟨ subst σ M , subst σ N ⟩
-subst σ (proj₁ M)  = proj₁ subst σ M
-subst σ (proj₂ N)  = proj₂ subst σ N
-subst σ (mlet L M) = mlet (subst σ L) (subst (λ x → mrename S_ (σ x)) M)
-subst σ ⌜ M ⌝      = ⌜ M ⌝
-
-_[_] : Δ ︔ (Γ , B) ⊢ A
-     → Δ ︔ Γ ⊢ B
-     → Δ ︔ Γ ⊢ A
-_[_] {Δ} {Γ} {B} M N = subst σ M
-  where
-  σ : ∀ {A} → Γ , B ∋ A → Δ ︔ Γ ⊢ A
-  σ Z      =  N 
-  σ (S x)  =  ` x  
-
-wk₁ : Δ ︔ Γ ⊢ A
-    → Δ ︔ Γ , B ⊢ A
-wk₁ = rename S_
-
-mwk₁ : Δ     ︔ Γ ⊢ A
-     → Δ , B ︔ Γ ⊢ A
-mwk₁ = mrename S_
-------------------------------------------------------------------------------
--- Modal substitution and structural rules 
-
-MSubst : Cxt → Cxt → Set
-MSubst Δ Δ′ = Subst Δ′ Δ Δ′ 
+exts σ (S p) = rename S_ id (σ p)
 
 mexts
   : MSubst Δ Δ′
   → MSubst (Δ , B) (Δ′ , B) 
 mexts σ Z     = ` Z -- ` (S Z)
-mexts σ (S x) = (wk₁ ∘ mwk₁) (σ x) 
+mexts σ (S x) = rename S_ S_ (σ x)
 
-msubst 
-  : MSubst Δ Δ′
-  → Δ  ︔ Γ ⊢ A
-  → Δ′ ︔ Γ ⊢ A
-msubst σ (` x)      = ` x
-msubst σ (ƛ M)      = ƛ msubst σ M
-msubst σ (M · N)    = msubst σ M · msubst σ N
-msubst σ ⟨⟩         = ⟨⟩
-msubst σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
-msubst σ (proj₁ M)  = proj₁ msubst σ M
-msubst σ (proj₂ M)  = proj₂ msubst σ M
-msubst σ (mlet L M) = mlet (msubst σ L) (msubst (mexts σ) M)
-msubst σ ⌜ M ⌝      = ⌜ subst σ (msubst σ M) ⌝
+_⟪_︔_⟫
+  : Δ ︔ Γ  ⊢ A
+  → Subst Δ′ Γ Γ′
+  → MSubst Δ Δ′
+  → Δ′ ︔ Γ′ ⊢ A
+(` x)      ⟪ σ₁ ︔ σ₂ ⟫ = σ₁ x
+(ƛ M)      ⟪ σ₁ ︔ σ₂ ⟫ = ƛ M ⟪ exts σ₁ ︔ σ₂ ⟫
+(M · N)    ⟪ σ₁ ︔ σ₂ ⟫ = M ⟪ σ₁ ︔ σ₂ ⟫ · N ⟪ σ₁ ︔ σ₂ ⟫
+⟨⟩         ⟪ σ₁ ︔ σ₂ ⟫ = ⟨⟩
+⟨ M , N ⟩  ⟪ σ₁ ︔ σ₂ ⟫ = ⟨ M ⟪ σ₁ ︔ σ₂ ⟫ , N ⟪ σ₁ ︔ σ₂ ⟫ ⟩
+(proj₁ L)  ⟪ σ₁ ︔ σ₂ ⟫ = proj₁ L ⟪ σ₁ ︔ σ₂ ⟫
+(proj₂ L)  ⟪ σ₁ ︔ σ₂ ⟫ = proj₂ L ⟪ σ₁ ︔ σ₂ ⟫
+(mlet N M) ⟪ σ₁ ︔ σ₂ ⟫ = mlet (N ⟪ σ₁ ︔ σ₂ ⟫) (M ⟪ rename id S_ ∘ σ₁ ︔ mexts σ₂ ⟫) 
+⌜ M ⌝      ⟪ σ₁ ︔ σ₂ ⟫ = ⌜ M ⟪ σ₂ ︔ σ₂ ⟫ ⌝
+
+subst-zero
+  : Δ ︔ Γ ⊢ B
+  → Subst Δ (Γ , B) Γ
+subst-zero N Z     = N
+subst-zero N (S x) = ` x
+
+_[_] : Δ ︔ (Γ , B) ⊢ A
+     → Δ ︔ Γ ⊢ B
+     → Δ ︔ Γ ⊢ A
+_[_] {Δ} {Γ} {B} M N = M ⟪ subst-zero N ︔ `_ ⟫
   
 _m[_]
   : Δ , B ︔ Γ ⊢ A
   → Δ ︔ Δ ⊢ B
   → Δ ︔ Γ ⊢ A
-_m[_] {Δ} {B} {Γ} M N = msubst σ₁ M 
-  where
-    σ₁ : MSubst (Δ , B) Δ
-    σ₁ Z     = N
-    σ₁ (S x) = ` x
-
--- m↑_ : ∅ ︔ Γ ⊢ A → Δ ︔ Γ ⊢ A
--- m↑_ = mrename λ ()
-
--- mwk
---   : ∀ Δ′ 
---   → Δ     ⧺ Δ′ ︔ Γ ⊢ A
---   → Δ , B ⧺ Δ′ ︔ Γ ⊢ A
--- mwk Δ′ = mrename (σ Δ′)
---   where
---     σ : ∀ Δ′ → Rename (Δ ⧺ Δ′) (Δ , B ⧺ Δ′)
---     σ Δ′ x with ⧺-∋ Δ′ x
---     ... | inj₁ Δ∋A = ∋-⧺⁺ˡ (S Δ∋A)
---     ... | inj₂ Γ∋A = ∋-⧺⁺ʳ (_ , _) Γ∋A
+_m[_] {Δ} {B} {Γ} M N = M ⟪ `_ ︔ subst-zero N ⟫
 
 ------------------------------------------------------------------------------
 -- Single-step reduction

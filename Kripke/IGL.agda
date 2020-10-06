@@ -10,7 +10,7 @@ open import Function
 
 open import Context
   renaming (ext to ext₁)
-  hiding ([_])
+  hiding ([_]; Rename)
 
 open import Relation.Binary.PropositionalEquality as P using (_≡_)
 open import Data.Product using (∃-syntax; _×_; _,_)

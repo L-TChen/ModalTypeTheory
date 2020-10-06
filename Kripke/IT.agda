@@ -6,7 +6,8 @@ module Kripke.IT where
 
 open import Data.Nat
 
-open import Context hiding ([_])
+open import Context
+  hiding ([_]; Rename)
 
 infix  3 _⊢_
 

@@ -7,7 +7,7 @@ module Kripke.IK where
 open import Data.Nat
 open import Context
   renaming (ext to ext₁)
-  hiding ([_])
+  hiding ([_]; Rename)
 
 infix  3 _⊢_
 

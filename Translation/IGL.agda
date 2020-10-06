@@ -53,20 +53,6 @@ d2k (mlet M N) σ = d2k N (λ { Z → unbox Z (d2k M σ) ; (S x) → σ x })
 ... | inj₁ Δ∋A = σ Δ∋A
 ... | inj₂ Δ'∋A = σ' Δ'∋A
 
-⧺-trans : ∀ Δ Δ' Γ → D.Rename (Δ ⧺ (Δ' ⧺ Γ)) ((Δ ⧺ Δ') ⧺ Γ)
-⧺-trans Δ Δ' Γ x with ⧺-∋ (Δ' ⧺ Γ) x
-... | inj₁ Δ∋A = ∋-⧺⁺ˡ {Δ = Γ} (∋-⧺⁺ˡ {Δ = Δ'} Δ∋A)
-... | inj₂ Δ'⧺Γ∋A with ⧺-∋ Γ Δ'⧺Γ∋A
-... | inj₁ Δ'∋A = ∋-⧺⁺ˡ {Δ = Γ} (∋-⧺⁺ʳ Δ Δ'∋A)
-... | inj₂ Γ∋A = ∋-⧺⁺ʳ (Δ ⧺ Δ') Γ∋A
-
-⧺-trans-rev : ∀ Δ Δ' Γ → D.Rename ((Δ ⧺ Δ') ⧺ Γ) (Δ ⧺ (Δ' ⧺ Γ))
-⧺-trans-rev Δ Δ' Γ x with ⧺-∋ Γ x
-... | inj₂ Γ∋A = ∋-⧺⁺ʳ Δ (∋-⧺⁺ʳ Δ' Γ∋A)
-... | inj₁ Δ⧺Δ'∋A with ⧺-∋ Δ' Δ⧺Δ'∋A
-... | inj₁ Δ∋A = ∋-⧺⁺ˡ {Δ = Δ' ⧺ Γ} Δ∋A
-... | inj₂ Δ'∋A = ∋-⧺⁺ʳ Δ (∋-⧺⁺ˡ {Δ = Γ} Δ'∋A)
-
 extᵣ : ∀ Γ → D.Rename Δ Δ' → D.Rename (Δ ⧺ Γ) (Δ' ⧺ Γ)
 extᵣ Γ ρ = ⧺-∋-case (λ x → ∋-⧺⁺ˡ {Δ = Γ} (ρ x)) (∋-⧺⁺ʳ _)
 
@@ -83,26 +69,26 @@ renameMePlz {Γ = Γ} {Δ = Δ} {Δ' = Δ'} x with ⧺-∋ Δ x
 bind : ∀ Θ → Δ ⧺ Θ ︔ Γ ⊢ A → UnboxSubst Δ (Ψ , Γ) → ∃[ Δ' ] (Δ' ⧺ Θ ︔ Δ' ⧺ Γ ⊢ A × UnboxSubst Δ' Ψ)
 k2d : Ψ , Γ ⊢ A → ∃[ Δ ] (Δ ︔ Δ ⧺ Γ ⊢ A × UnboxSubst Δ Ψ)
 
-bind {Δ = ∅}             Θ N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) N ، (λ ())
+bind {Δ = ∅}             Θ N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) id N ، (λ ())
 
 bind {Δ = Δ , B} {Γ = Γ} Θ N σ with σ Z
 -- if `σ Z` has label 1, bind `σ Z`
 bind {Δ = Δ , B} {Γ = Γ} Θ N σ | unbox Z M with k2d M
-... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (Δ₁ ⧺ Θ) (mlet (D.mrename (∋-⧺⁺ʳ Δ ∘ ∋-⧺⁺ˡ) M₁) (D.mrename renameMePlz (D.rename (∋-⧺⁺ʳ _) N))) (renameUnbox (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
-... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.mrename (⧺-trans Δ₂ Δ₁ Θ) (D.rename (⧺-trans Δ₂ Δ₁ Γ) M₂) ، ⧺-∋-case σ₂ σ₁
+... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (Δ₁ ⧺ Θ) (mlet (D.rename id (∋-⧺⁺ʳ Δ ∘ ∋-⧺⁺ˡ) M₁) (D.rename id renameMePlz (D.rename (∋-⧺⁺ʳ _) id N))) (renameUnbox (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، (D.rename (∋-⧺-assocˡ Δ₂ Δ₁ Γ) (∋-⧺-assocˡ Δ₂ Δ₁ Θ) M₂) ، ⧺-∋-case σ₂ σ₁
 -- if `σ Z` has label l > 1, skip `σ Z` and bind others
-bind {Δ = Δ , B} {Γ = Γ} Θ N σ | unbox (S n) M with bind (∅ , B ⧺ Θ) (D.mrename (⧺-trans-rev Δ (∅ , B) Θ) N) (σ ∘ S_)
+bind {Δ = Δ , B} {Γ = Γ} Θ N σ | unbox (S n) M with bind (∅ , B ⧺ Θ) (D.rename id (∋-⧺-assocʳ Δ (∅ , B) Θ) N) (σ ∘ S_)
 -- ... then add `σ Z` back with label `l - 1`
-... | Δ' ، N' ، σ' = (Δ' , B) ، D.mrename (⧺-trans Δ' (∅ , B) Θ) (D.rename (extᵣ Γ S_) N') ، λ { Z → unbox n M ; (S x) → σ' x }
+... | Δ' ، N' ، σ' = (Δ' , B) ، D.rename (extᵣ Γ S_) (∋-⧺-assocˡ Δ' (∅ , B) Θ) N' ، λ { Z → unbox n M ; (S x) → σ' x }
 
 k2d (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
 k2d (ƛ M) with k2d M
 ... | Δ ، M' ، σ = Δ ، ƛ M' ، σ
 k2d {Γ = Γ} (M₁ · M₂) with k2d M₁ | k2d M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.mrename ∋-⧺⁺ˡ (D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁') · D.mrename (∋-⧺⁺ʳ Δ₁) (D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) M₂') ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، D.rename (extᵣ Γ ∋-⧺⁺ˡ) ∋-⧺⁺ˡ M₁' · D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) (∋-⧺⁺ʳ Δ₁) M₂' ، ⧺-∋-case σ₁ σ₂
 k2d ⟨⟩ = ∅ ، ⟨⟩ ، (λ ())
 k2d {Γ = Γ} ⟨ M₁ , M₂ ⟩ with k2d M₁ | k2d M₂
-... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.mrename ∋-⧺⁺ˡ (D.rename (extᵣ Γ ∋-⧺⁺ˡ) M₁') , D.mrename (∋-⧺⁺ʳ Δ₁) (D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) M₂') ⟩ ، ⧺-∋-case σ₁ σ₂
+... | Δ₁ ، M₁' ، σ₁ | Δ₂ ، M₂' ، σ₂ = (Δ₁ ⧺ Δ₂) ، ⟨ D.rename (extᵣ Γ ∋-⧺⁺ˡ) ∋-⧺⁺ˡ M₁' , D.rename (extᵣ Γ (∋-⧺⁺ʳ Δ₁)) (∋-⧺⁺ʳ Δ₁) M₂' ⟩ ، ⧺-∋-case σ₁ σ₂
 k2d (proj₁ M) with k2d M
 ... |  Δ ، M' ، σ = Δ ، proj₁ M' ، σ
 k2d (proj₂ M) with k2d M

@@ -78,6 +78,8 @@ ext
 ext ρ Z      =  Z
 ext ρ (S x)  =  S (ρ x)
 
+Rename : Context Ty → Context Ty → Set
+Rename Γ Γ′ = ∀ {A} → Γ ∋ A → Γ′ ∋ A
 ------------------------------------------------------------------------------
 -- Prefix
 
@@ -103,16 +105,41 @@ prefix-trans m (S n) = S prefix-trans m n
 ... | inj₁ Γ∋A = inj₁ Γ∋A
 ... | inj₂ Δ∋A = inj₂ (S Δ∋A)
 
-∋-⧺⁺ˡ : Γ ∋ A → (Γ ⧺ Δ) ∋ A
+∋-⧺⁺ˡ : Rename Γ (Γ ⧺ Δ)
 ∋-⧺⁺ˡ {Δ = ∅}     x = x
 ∋-⧺⁺ˡ {Δ = Δ , B} x = S (∋-⧺⁺ˡ x)
 
-∋-⧺⁺ʳ : ∀ Γ → Δ ∋ A → (Γ ⧺ Δ) ∋ A
+∋-⧺⁺ʳ : ∀ Γ → Rename Δ (Γ ⧺ Δ)
 ∋-⧺⁺ʳ Γ Z     = Z
 ∋-⧺⁺ʳ Γ (S x) = S ∋-⧺⁺ʳ Γ x
 
-∅⧺∋A : ∀ {Γ} → ∅ ⧺ Γ ∋ A → Γ ∋ A
+∅⧺∋A : Rename (∅ ⧺ Γ) Γ
 ∅⧺∋A = P.subst (λ Γ → Γ ∋ _) (⧺-identityˡ _)
+
+∋-insert-inbetween : ∀ Δ′ → Rename (Δ ⧺ Δ′) ((Δ , B) ⧺ Δ′)
+∋-insert-inbetween Δ′ x with ⧺-∋ Δ′ x
+... | inj₁ Δ∋A = ∋-⧺⁺ˡ (S Δ∋A) 
+... | inj₂ Γ∋A = ∋-⧺⁺ʳ (_ , _) Γ∋A
+
+∋-exchange : (Δ′ : Context Ty) → Rename ((Δ , B) ⧺ Δ′) (Δ ⧺ (Δ′ , B))
+∋-exchange {Δ = Δ} Δ′ x with ⧺-∋ Δ′ x
+... | inj₁ Z        = Z
+... | inj₁ (S left) = S ∋-⧺⁺ˡ left
+... | inj₂ right    = S ∋-⧺⁺ʳ Δ right
+
+∋-⧺-assocˡ : (Δ Δ' Γ : Context Ty) → Rename (Δ ⧺ (Δ' ⧺ Γ)) ((Δ ⧺ Δ') ⧺ Γ)
+∋-⧺-assocˡ Δ Δ' Γ x with ⧺-∋ (Δ' ⧺ Γ) x
+... | inj₁ Δ∋A = ∋-⧺⁺ˡ {Δ = Γ} (∋-⧺⁺ˡ {Δ = Δ'} Δ∋A)
+... | inj₂ Δ'⧺Γ∋A with ⧺-∋ Γ Δ'⧺Γ∋A
+... | inj₁ Δ'∋A = ∋-⧺⁺ˡ {Δ = Γ} (∋-⧺⁺ʳ Δ Δ'∋A)
+... | inj₂ Γ∋A = ∋-⧺⁺ʳ (Δ ⧺ Δ') Γ∋A
+
+∋-⧺-assocʳ : (Δ Δ' Γ : Context Ty) → Rename ((Δ ⧺ Δ') ⧺ Γ) (Δ ⧺ (Δ' ⧺ Γ))
+∋-⧺-assocʳ Δ Δ' Γ x with ⧺-∋ Γ x
+... | inj₂ Γ∋A = ∋-⧺⁺ʳ Δ (∋-⧺⁺ʳ Δ' Γ∋A)
+... | inj₁ Δ⧺Δ'∋A with ⧺-∋ Δ' Δ⧺Δ'∋A
+... | inj₁ Δ∋A = ∋-⧺⁺ˡ {Δ = Δ' ⧺ Γ} Δ∋A
+... | inj₂ Δ'∋A = ∋-⧺⁺ʳ Δ (∋-⧺⁺ˡ {Δ = Γ} Δ'∋A)
 
 prefix-⧺ᵣ : ∀ Δ → Prefix Γ (Γ ⧺ Δ)
 prefix-⧺ᵣ ∅ = Z
