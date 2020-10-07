@@ -4,7 +4,6 @@
 
 module Dual.IGL where
 
-open import Data.Sum
 open import Data.Nat
 open import Function
   hiding (_∋_)
@@ -14,7 +13,7 @@ open import Context public
 
 infix  3 _︔_⊢_
 
-infixr 5 ƛ_ mfix_
+infixr 5 ƛ_ mfix_ mlet_`in_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
@@ -58,7 +57,7 @@ data _︔_⊢_ where
   proj₂_ : Δ ︔ Γ ⊢ A ×̇ B
          → Δ ︔ Γ ⊢ B
 
-  mlet
+  mlet_`in_
       : Δ     ︔ Γ ⊢ □ A
       → Δ , A ︔ Γ ⊢ B
         ---------
@@ -75,14 +74,15 @@ data _︔_⊢_ where
 -- Examples
 
 GL : ∅ ︔ ∅ ⊢ □ (□ A →̇ A) →̇ □ A
-GL = ƛ mlet (# 0) (mfix (# 1 · # 0))
+GL = ƛ mlet (# 0) `in (mfix (# 1 · # 0))
 
 ------------------------------------------------------------------------------
 -- Modal/ordinary variable renaming with structural rules
 
-rename : Rename Γ Γ′
+rename
+  : Rename Γ Γ′
   → Rename Δ Δ′
-  → Δ ︔ Γ  ⊢ A
+  → Δ  ︔ Γ  ⊢ A
   → Δ′ ︔ Γ′ ⊢ A
 rename ρ₁ ρ₂ (` x)      = ` ρ₁ x
 rename ρ₁ ρ₂ (ƛ M)      = ƛ rename (ext ρ₁) ρ₂ M
@@ -91,7 +91,8 @@ rename ρ₁ ρ₂ ⟨⟩         = ⟨⟩
 rename ρ₁ ρ₂ ⟨ M , N ⟩  =  ⟨ rename ρ₁ ρ₂ M , rename ρ₁ ρ₂ N ⟩
 rename ρ₁ ρ₂ (proj₁ L)  = proj₁ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
-rename ρ₁ ρ₂ (mlet N M) = mlet (rename ρ₁ ρ₂ N) (rename ρ₁ (ext ρ₂) M)
+rename ρ₁ ρ₂ (mlet N `in M) =
+  mlet rename ρ₁ ρ₂ N `in rename ρ₁ (ext ρ₂) M
 rename ρ₁ ρ₂ (mfix M)   = mfix rename (ext ρ₂) ρ₂ M 
 
 wk₁
@@ -142,13 +143,14 @@ _⟪_⟫ : Δ ︔ Γ ⊢ A
   → Subst Δ Γ Γ′
   → Δ ︔ Γ′ ⊢ A
 (` x)     ⟪ σ ⟫ = σ x  
-(ƛ M)     ⟪ σ ⟫ = {!!} 
-(M · N)   ⟪ σ ⟫ = (M ⟪ σ ⟫) · (N ⟪ σ ⟫) 
+(ƛ M)     ⟪ σ ⟫ = ƛ M ⟪ exts σ ⟫ 
+(M · N)   ⟪ σ ⟫ = M ⟪ σ ⟫ · N ⟪ σ ⟫
 ⟨⟩        ⟪ σ ⟫ = ⟨⟩ 
 ⟨ M , N ⟩ ⟪ σ ⟫ = ⟨ M ⟪ σ ⟫ , N ⟪ σ ⟫ ⟩ 
-(proj₁ L) ⟪ σ ⟫ = proj₁ (L ⟪ σ ⟫) 
-(proj₂ L) ⟪ σ ⟫ = proj₂ (L ⟪ σ ⟫) 
-mlet N M  ⟪ σ ⟫ = mlet (N ⟪ σ ⟫) (M ⟪ mwk₁ ∘ σ ⟫) 
+(proj₁ L) ⟪ σ ⟫ = proj₁ L ⟪ σ ⟫ 
+(proj₂ L) ⟪ σ ⟫ = proj₂ L ⟪ σ ⟫
+(mlet N `in M) ⟪ σ ⟫ =
+  mlet N ⟪ σ ⟫ `in M ⟪ mwk₁ ∘ σ ⟫
 (mfix M)  ⟪ σ ⟫ = mfix M 
 
 subst-zero
@@ -160,24 +162,25 @@ subst-zero N (S x) = ` x
 _[_] : Δ ︔ (Γ , B) ⊢ A
      → Δ ︔ Γ ⊢ B
      → Δ ︔ Γ ⊢ A
-_[_] M N = M ⟪ subst-zero N ⟫
+M [ N ] = M ⟪ subst-zero N ⟫
 
 _m⟪_⟫ 
   : Δ ︔ Γ ⊢ A
   → MSubst Δ Δ′
   → Δ′ ︔ Γ ⊢ A
 (` x)     m⟪ σ ⟫ = ` x 
-(ƛ M)     m⟪ σ ⟫ = ƛ (M m⟪ σ ⟫) 
-(M · N)   m⟪ σ ⟫ = (M m⟪ σ ⟫) · (N m⟪ σ ⟫) 
+(ƛ M)     m⟪ σ ⟫ = ƛ M m⟪ σ ⟫
+(M · N)   m⟪ σ ⟫ = M m⟪ σ ⟫ · N m⟪ σ ⟫
 ⟨⟩        m⟪ σ ⟫ = ⟨⟩ 
 ⟨ M , N ⟩ m⟪ σ ⟫ = ⟨ M m⟪ σ ⟫ , N m⟪ σ ⟫ ⟩ 
-(proj₁ L) m⟪ σ ⟫ = proj₁ (L m⟪ σ ⟫) 
-(proj₂ L) m⟪ σ ⟫ = proj₂ (L m⟪ σ ⟫) 
-mlet N M  m⟪ σ ⟫ = mlet (N m⟪ σ ⟫) (M m⟪ mexts σ ⟫) 
-_m⟪_⟫ {Δ} {Γ} {A} {Δ′} (mfix M) σ = mfix M m⟪ wk₁ ∘ mσ ⟫ ⟪ exts mσ ⟫
+(proj₁ L) m⟪ σ ⟫ = proj₁ L m⟪ σ ⟫
+(proj₂ L) m⟪ σ ⟫ = proj₂ L m⟪ σ ⟫
+(mlet N `in M)  m⟪ σ ⟫ =
+  mlet N m⟪ σ ⟫ `in M m⟪ mexts σ ⟫
+_m⟪_⟫ {Δ} {Δ′ = Δ′} (mfix M) σ = mfix M m⟪ wk₁ ∘ mσ ⟫ ⟪ exts mσ ⟫
   where 
     mσ : ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ ⊢ A
-    mσ x = (σ x [ mfix (σ x) ])
+    mσ x = σ x [ mfix σ x ]
 
 msubst-zero
   : Δ ︔ Δ , □ B ⊢ B
@@ -199,9 +202,14 @@ M m[ N ] = M m⟪ msubst-zero N ⟫
   → Δ ︔ Γ ⊢ □ A
 ⌜_⌝ = mfix_ ∘ m↑_ ∘ wk₁
 
-K : Δ ︔ Γ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ # 1 · # 0 ⌝)
+K : ∅ ︔ ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
+K = ƛ ƛ mlet # 1 `in
+        mlet # 0 `in
+        ⌜ # 1 · # 0 ⌝
 
+Four : ∅ ︔ ∅ ⊢ □ A →̇ □ □ A
+Four = ƛ mlet # 0 `in
+         mfix ⌜ # 0 ⌝
 ------------------------------------------------------------------------------
 -- Single-step reduction
 
@@ -210,7 +218,7 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
   β-ƛ·
     : _ ︔ _ ⊢ (ƛ M) · N -→ M [ N ]
   β-mfix
-    : _ ︔ _ ⊢ mlet (mfix M) N -→ N m[ wk₁ (M [ mfix M ]) ]
+    : _ ︔ _ ⊢ mlet mfix M `in N -→ N m[ wk₁ (M [ mfix M ]) ]
   β-⟨,⟩proj₁
     : _ ︔ _ ⊢ proj₁ ⟨ M , N ⟩ -→ M
 
@@ -243,23 +251,23 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
 
   ξ-mlet₁
     : _ ︔ _ ⊢ N -→ N′
-    → _ ︔ _ ⊢ mlet N M -→ mlet N′ M
+    → _ ︔ _ ⊢ mlet N `in M -→ mlet N′ `in M
 
   ξ-mlet₂
     : _ ︔ _ ⊢ M -→ M′
-    → _ ︔ _ ⊢ mlet N M -→ mlet N M′
+    → _ ︔ _ ⊢ mlet N `in M -→ mlet N `in M′
 
   δ-proj₁-mlet
-    : Δ ︔ Γ ⊢ proj₁ (mlet N M) -→ mlet N (proj₁ M)
+    : Δ ︔ Γ ⊢ proj₁ (mlet N `in M) -→ mlet N `in (proj₁ M)
 
   δ-proj₂-mleqt
-    : Δ ︔ Γ ⊢ proj₂ (mlet N M) -→ mlet N (proj₂ M)
+    : Δ ︔ Γ ⊢ proj₂ (mlet N `in M) -→ mlet N `in (proj₂ M)
 
   δ-·-mlet
-    : Δ ︔ Γ ⊢ (mlet N L) · M -→ mlet N (L · mwk ∅ M)
+    : Δ ︔ Γ ⊢ (mlet N `in L) · M -→ mlet N `in (L · mwk ∅ M)
 
   δ-mlet-mlet
-    : Δ ︔ Γ ⊢ mlet (mlet N L) M -→ mlet N (mlet L (mwk (∅ , _) M))
+    : Δ ︔ Γ ⊢ mlet (mlet N `in L) `in M -→ mlet N `in (mlet L `in (mwk (∅ , _) M))
 
 ------------------------------------------------------------------------------
 -- Transitive and reflexive closure of -→ 
@@ -336,7 +344,7 @@ progress (proj₁ MN) with progress MN
 progress (proj₂ MN) with progress MN
 ... | step M-→N      = step (ξ-proj₂ M-→N)
 ... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
-progress (mlet N M)  with progress N
+progress (mlet N `in M)  with progress N
 ... | step N→N′      = step (ξ-mlet₁ N→N′)
 ... | done (mfix N′) = step β-mfix
 progress (mfix M)    = done (mfix M)

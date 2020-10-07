@@ -38,7 +38,7 @@ d2k ⟨ M , N ⟩  σ = ⟨ d2k M σ , d2k N σ ⟩
 d2k (proj₁ M)  σ = proj₁ d2k M σ
 d2k (proj₂ M)  σ = proj₂ d2k M σ
 d2k ⌜ M ⌝      σ = ⌜ K.subst₁ (⌞_⌟ ∘ σ) (d2k M (λ ())) ⌝
-d2k (mlet M N) σ = d2k N (λ { Z → d2k M σ ; (S x) → σ x })
+d2k (mlet M `in N) σ = d2k N (λ { Z → d2k M σ ; (S x) → σ x })
 
 
 ------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ k2d : Ψ , Γ ⊢ A → ∃[ Δ ] (∅ ︔ Δ ⧺ Γ ⊢ A × □Subst Δ Ψ)
 
 bind {Δ = ∅} N σ = ∅ ، D.rename (∋-⧺⁺ʳ ∅) id N ، (λ ())
 bind {Δ = Δ , B} {Γ = Γ} N σ with k2d (σ Z)
-... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet (D.m↑ M₁) (D.rename (∋-⧺⁺ʳ Δ₁) id N)) (K.rename₁ (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (mlet D.m↑ M₁ `in D.rename (∋-⧺⁺ʳ Δ₁) id N) (K.rename₁ (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (∋-⧺-assocˡ Δ₂ Δ₁ Γ) id M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d (` x) = ∅ ، ` ∋-⧺⁺ʳ _ x ، λ ()
@@ -107,7 +107,7 @@ rename₁' ρ = rename' (K.ids , ρ)
 bind' : Δ ︔ Γ ⊢ A → □Subst' Δ (Ψ , Γ) → Ψ , Γ ⊢' A
 bind' {Δ = ∅}             N σ = ∅ ، D.rename (∋-⧺⁺ʳ ∅) id N ، (λ ())
 bind' {Δ = Δ , B} {Γ = Γ} N σ with σ Z
-... | Δ₁ ، M₁ ، σ₁ with bind' {Γ = Δ₁ ⧺ Γ} (mlet (D.m↑ M₁) (D.rename (∋-⧺⁺ʳ Δ₁) id N)) (rename₁' (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind' {Γ = Δ₁ ⧺ Γ} (mlet D.m↑ M₁ `in D.rename (∋-⧺⁺ʳ Δ₁) id N) (rename₁' (∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، D.rename (∋-⧺-assocˡ Δ₂ Δ₁ Γ) id M₂ ، ⧺-∋-case σ₂ σ₁
 
 k2d' : Ψ , Γ ⊢ A → Ψ , Γ ⊢' A
@@ -135,7 +135,9 @@ kripkeK : ∅ , ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
 kripkeK = ƛ ƛ ⌜ ⌞ ` S Z ⌟ · ⌞ ` Z ⌟ ⌝
 
 dualK : ∅ ︔ ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-dualK = ƛ ƛ mlet (` S Z) (mlet (` Z) ⌜ ` S Z · ` Z ⌝)
+dualK = ƛ ƛ mlet D.# 1 `in
+            mlet D.# 0 `in
+            ⌜ ` S Z · ` Z ⌝
 -- check₁ fails , check₂ passes
 -- dualK = ƛ ƛ mlet (` Z) (mlet (` S Z) ⌜ ` Z · ` S Z ⌝)
 
@@ -149,7 +151,7 @@ kripke□×̇ : ∅ , ∅ ⊢ □ (A ×̇ B) →̇ (□ A ×̇ □ B)
 kripke□×̇ = ƛ ⟨ ⌜ proj₁ ⌞ ` Z ⌟ ⌝ , ⌜ proj₂ ⌞ ` Z ⌟ ⌝ ⟩
 
 dual□×̇ : ∅ ︔ ∅ ⊢ □ (A ×̇ B) →̇ (□ A ×̇ □ B)
-dual□×̇ = ƛ ⟨ mlet (` Z) ⌜ proj₁ ` Z ⌝ , mlet (` Z) ⌜ proj₂ ` Z ⌝ ⟩
+dual□×̇ = ƛ ⟨ mlet D.# 0 `in ⌜ proj₁ D.# 0 ⌝ , mlet D.# 0 `in ⌜ proj₂ D.# 0 ⌝ ⟩
 
 check₃ : k2d (kripke□×̇ {A} {B}) ≡ (∅ ، dual□×̇ {A} {B} ، λ ())
 check₃ = P.refl
@@ -161,7 +163,9 @@ kripke×̇□ : ∅ , ∅ ⊢ (□ A ×̇ □ B) →̇ □ (A ×̇ B)
 kripke×̇□ = ƛ ⌜ ⟨ ⌞ proj₁ ` Z ⌟ , ⌞ proj₂ ` Z ⌟ ⟩ ⌝
 
 dual×̇□ : ∅ ︔ ∅ ⊢ (□ A ×̇ □ B) →̇ □ (A ×̇ B)
-dual×̇□ = ƛ mlet (proj₁ ` Z) ( mlet (proj₂ ` Z) ⌜ ⟨ ` S Z , ` Z ⟩ ⌝)
+dual×̇□ = ƛ mlet proj₁ D.# 0 `in
+           mlet proj₂ D.# 0 `in
+           ⌜ ⟨ D.# 1 , D.# 0 ⟩ ⌝
 
 check₅ : k2d (kripke×̇□ {A} {B}) ≡ (∅ ، dual×̇□ {A} {B} ، λ ())
 check₅ = P.refl

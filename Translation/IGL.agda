@@ -46,7 +46,7 @@ d2k ⟨ M , N ⟩ σ = ⟨ d2k M σ , d2k N σ ⟩
 d2k (proj₁ M) σ = proj₁ d2k M σ
 d2k (proj₂ M) σ = proj₂ d2k M σ
 d2k (mfix M) σ = mfix K.subst (K.`s , λ { Z → ` Z; (S x) → runUnbox (σ x) }) (d2k M (liftUnbox ∘ σ))
-d2k (mlet M N) σ = d2k N (λ { Z → unbox Z (d2k M σ) ; (S x) → σ x })
+d2k (mlet M `in N) σ = d2k N (λ { Z → unbox Z (d2k M σ) ; (S x) → σ x })
 
 ⧺-∋-case : {P : Type → Set} → (∀ {A} → Δ ∋ A → P A) → (∀ {A} → Δ' ∋ A → P A) → (∀ {A} → (Δ ⧺ Δ') ∋ A → P A)
 ⧺-∋-case {Δ' = Δ'} σ σ' x with ⧺-∋ Δ' x
@@ -74,7 +74,7 @@ bind {Δ = ∅}             Θ N σ = ∅ ، D.rename (∋-⧺⁺ʳ _) id N ، (
 bind {Δ = Δ , B} {Γ = Γ} Θ N σ with σ Z
 -- if `σ Z` has label 1, bind `σ Z`
 bind {Δ = Δ , B} {Γ = Γ} Θ N σ | unbox Z M with k2d M
-... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (Δ₁ ⧺ Θ) (mlet (D.rename id (∋-⧺⁺ʳ Δ ∘ ∋-⧺⁺ˡ) M₁) (D.rename id renameMePlz (D.rename (∋-⧺⁺ʳ _) id N))) (renameUnbox (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
+... | Δ₁ ، M₁ ، σ₁ with bind {Γ = Δ₁ ⧺ Γ} (Δ₁ ⧺ Θ) (mlet D.rename id (∋-⧺⁺ʳ Δ ∘ ∋-⧺⁺ˡ) M₁ `in D.rename id renameMePlz (D.rename (∋-⧺⁺ʳ _) id N)) (renameUnbox (K.ids , ∋-⧺⁺ʳ Δ₁) ∘ σ ∘ S_)
 ... | Δ₂ ، M₂ ، σ₂ = (Δ₂ ⧺ Δ₁) ، (D.rename (∋-⧺-assocˡ Δ₂ Δ₁ Γ) (∋-⧺-assocˡ Δ₂ Δ₁ Θ) M₂) ، ⧺-∋-case σ₂ σ₁
 -- if `σ Z` has label l > 1, skip `σ Z` and bind others
 bind {Δ = Δ , B} {Γ = Γ} Θ N σ | unbox (S n) M with bind (∅ , B ⧺ Θ) (D.rename id (∋-⧺-assocʳ Δ (∅ , B) Θ) N) (σ ∘ S_)

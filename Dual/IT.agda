@@ -14,7 +14,7 @@ open import Context   public
 
 infix  3 _︔_⊢_
 
-infixr 5 ƛ_
+infixr 5 ƛ_ mlet_`in_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
@@ -66,7 +66,7 @@ data _︔_⊢_ Δ Γ where
     : ∅ ︔ Δ ⊢ A
       --------------
     → Δ ︔ Γ ⊢ □ A
-  mlet
+  mlet_`in_
     : Δ     ︔ Γ ⊢ □ A
     → Δ , A ︔ Γ ⊢ B
       ---------------
@@ -82,21 +82,16 @@ m# n  =  ᵒ count n
 -- Examples
 
 K : ∅ ︔ ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ # 1 · # 0 ⌝) 
+K = ƛ ƛ mlet # 1 `in mlet # 0 `in ⌜ # 1 · # 0 ⌝
 
 _ : ∅ ︔ ∅ ⊢ □ (A ×̇ B) →̇ □ A ×̇ □ B
-_ = ƛ ⟨ mlet (# 0) ⌜ proj₁ # 0 ⌝ , mlet (# 0) ⌜ proj₂ # 0 ⌝  ⟩
+_ = ƛ ⟨ mlet # 0 `in ⌜ proj₁ # 0 ⌝ , mlet # 0 `in ⌜ proj₂ # 0 ⌝  ⟩
 
 _ : ∅ ︔ ∅ ⊢  □ A ×̇ □ B →̇ □ (A ×̇ B) 
-_ = ƛ mlet (proj₁ # 0) (mlet (proj₂ # 0) ⌜ ⟨ # 1 , # 0 ⟩ ⌝)
+_ = ƛ mlet proj₁ # 0 `in mlet proj₂ # 0 `in ⌜ ⟨ # 1 , # 0 ⟩ ⌝
+
 ------------------------------------------------------------------------------
--- Substitution / Cut
-
-Subst : Cxt → Cxt → Cxt → Set
-Subst Δ Γ Γ′ = (∀ {A} → Γ ∋ A → Δ ︔ Γ′ ⊢ A)
-
-MSubst : Cxt → Cxt → Set
-MSubst Δ Δ′ = Subst ∅ Δ Δ′
+-- Modal/Ordinary variable renaming
 
 rename : Rename Γ Γ′
   → Rename Δ Δ′
@@ -111,7 +106,7 @@ rename ρ₁ ρ₂ ⟨ M , N ⟩  = ⟨ rename ρ₁ ρ₂ M , rename ρ₁ ρ�
 rename ρ₁ ρ₂ (proj₁ L)  = proj₁ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ ⌜ M ⌝      = ⌜ rename ρ₂ id M ⌝
-rename ρ₁ ρ₂ (mlet N M) = mlet (rename ρ₁ ρ₂ N) (rename ρ₁ (ext ρ₂) M) 
+rename ρ₁ ρ₂ (mlet N `in M) = mlet rename ρ₁ ρ₂ N `in rename ρ₁ (ext ρ₂) M
 
 wk₁
   : (Δ ︔ Γ     ⊢ A)
@@ -135,6 +130,13 @@ mex
 mex {Δ} Δ′ = rename id (∋-exchange Δ′)
 
 ------------------------------------------------------------------------------
+-- 
+
+Subst : Cxt → Cxt → Cxt → Set
+Subst Δ Γ Γ′ = (∀ {A} → Γ ∋ A → Δ ︔ Γ′ ⊢ A)
+
+MSubst : Cxt → Cxt → Set
+MSubst Δ Δ′ = Subst ∅ Δ Δ′
 
 exts
   : Subst Δ Γ Γ′
@@ -166,10 +168,11 @@ dereliction Γ′ ⟨ M , N ⟩  = ⟨ dereliction Γ′ M , dereliction Γ′ N
 dereliction Γ′ (proj₁ M)  = proj₁ dereliction Γ′ M
 dereliction Γ′ (proj₂ M)  = proj₂ dereliction Γ′ M
 dereliction Γ′ ⌜ M ⌝      = ⌜ rename ∋-⧺⁺ˡ id M ⌝
-dereliction Γ′ (mlet N M) = mlet (dereliction Γ′ N) (mex _ (dereliction Γ′ M))
+dereliction Γ′ (mlet N `in M) =
+  mlet dereliction Γ′ N `in mex _ (dereliction Γ′ M)
 
 ------------------------------------------------------------------------------
--- Substitution
+-- Modal/Ordinary Substitution
 
 _⟪_︔_⟫ : Δ ︔ Γ  ⊢ A
   → Subst Δ′ Γ Γ′
@@ -184,7 +187,8 @@ _⟪_︔_⟫ : Δ ︔ Γ  ⊢ A
 (proj₁ L) ⟪ σ₁ ︔ σ₂ ⟫ = proj₁ (L ⟪ σ₁ ︔ σ₂ ⟫)
 (proj₂ L) ⟪ σ₁ ︔ σ₂ ⟫ = proj₂ (L ⟪ σ₁ ︔ σ₂ ⟫)
 ⌜ M ⌝     ⟪ σ₁ ︔ σ₂ ⟫ = ⌜ M ⟪ σ₂ ︔ (λ ()) ⟫ ⌝
-mlet N M  ⟪ σ₁ ︔ σ₂ ⟫ = mlet (N ⟪ σ₁ ︔ σ₂ ⟫) (M ⟪ mwk₁ ∘ σ₁ ︔ mexts σ₂ ⟫)
+(mlet N `in M) ⟪ σ₁ ︔ σ₂ ⟫ =
+  mlet N ⟪ σ₁ ︔ σ₂ ⟫ `in M ⟪ mwk₁ ∘ σ₁ ︔ mexts σ₂ ⟫
 
 _[_] : Δ ︔ (Γ , B) ⊢ A
      → Δ ︔ Γ ⊢ B
@@ -214,7 +218,7 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
     : Δ ︔ Γ ⊢ (ƛ M) · N -→ M [ N ]
 
   β-⌜⌝mlet
-    : Δ ︔ Γ ⊢ mlet ⌜ N ⌝ M -→ M m[ N ]
+    : Δ ︔ Γ ⊢ mlet ⌜ N ⌝ `in M -→ M m[ N ]
 
   β-⟨,⟩proj₁
     : Δ ︔ Γ ⊢ proj₁ ⟨ M , N ⟩ -→ M
@@ -256,23 +260,23 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
 
   ξ-mlet₁
     : Δ ︔ Γ ⊢ N -→ N′
-    → Δ ︔ Γ ⊢ mlet N M -→ mlet N′ M
+    → Δ ︔ Γ ⊢ mlet N `in M -→ mlet N′ `in M
 
   ξ-mlet₂
     : Δ , A ︔ Γ ⊢ M -→ M′
-    → Δ     ︔ Γ ⊢ mlet N M -→ mlet N M′
+    → Δ     ︔ Γ ⊢ mlet N `in M -→ mlet N `in M′
 
   δ-proj₁-mlet
-    : Δ ︔ Γ ⊢ proj₁ (mlet N M) -→ mlet N (proj₁ M)
+    : Δ ︔ Γ ⊢ proj₁ (mlet N `in M) -→ mlet N `in proj₁ M
 
   δ-proj₂-mleqt
-    : Δ ︔ Γ ⊢ proj₂ (mlet N M) -→ mlet N (proj₂ M)
+    : Δ ︔ Γ ⊢ proj₂ (mlet N `in M) -→ mlet N `in proj₂ M
 
   δ-·-mlet
-    : Δ ︔ Γ ⊢ (mlet N L) · M -→ mlet N (L · mwk₁ M)
+    : Δ ︔ Γ ⊢ (mlet N `in L) · M -→ mlet N `in L · mwk₁ M
 
   δ-mlet-mlet
-    : Δ ︔ Γ ⊢ mlet (mlet N L) M -→ mlet N (mlet L (mwk₁ M))
+    : Δ ︔ Γ ⊢ mlet (mlet N `in L) `in M -→ mlet N `in mlet L `in mwk₁ M
 
 ------------------------------------------------------------------------------
 -- Multi-step beta-reduction
@@ -351,7 +355,7 @@ progress (proj₂ MN) with progress MN
 ... | step M-→N      = step (ξ-proj₂ M-→N)
 ... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
 progress ⌜ M ⌝       = done ⌜ M ⌝
-progress (mlet N M) with progress N
+progress (mlet N `in M) with progress N
 ... | step N-→N′ = step (ξ-mlet₁ N-→N′)
 ... | done ⌜ L ⌝ = step β-⌜⌝mlet
 
@@ -401,12 +405,12 @@ proj₂-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) = proj₂ M -→⟨ ξ-proj₂
 
 mlet-↠₁
   : Δ ︔ Γ ⊢ N -↠ N′
-  → Δ ︔ Γ ⊢ mlet N M -↠ mlet N′ M
-mlet-↠₁ (M ∎)                = mlet M _ ∎
-mlet-↠₁ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ _ -→⟨ ξ-mlet₁ M-→M′ ⟩ mlet-↠₁ M-↠N
+  → Δ ︔ Γ ⊢ mlet N `in M -↠ mlet N′ `in M
+mlet-↠₁ (M ∎)                = mlet M `in _ ∎
+mlet-↠₁ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ `in _ -→⟨ ξ-mlet₁ M-→M′ ⟩ mlet-↠₁ M-↠N
 
 mlet-↠₂
   : Δ , A ︔ Γ ⊢ M        -↠ M′
-  → Δ ︔ Γ     ⊢ mlet N M -↠ mlet N M′
-mlet-↠₂ (M ∎)                = mlet _ M ∎
-mlet-↠₂ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ M -→⟨ ξ-mlet₂ M-→M′ ⟩ mlet-↠₂ M-↠N
+  → Δ ︔ Γ     ⊢ mlet N `in M -↠ mlet N `in M′
+mlet-↠₂ (M ∎)                = mlet _ `in M ∎
+mlet-↠₂ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ `in M -→⟨ ξ-mlet₂ M-→M′ ⟩ mlet-↠₂ M-↠N

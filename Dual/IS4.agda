@@ -13,7 +13,7 @@ open import Context   public
 
 infix  3 _︔_⊢_
 
-infixr 5 ƛ_
+infixr 5 ƛ_ mlet_`in_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
@@ -65,7 +65,7 @@ data _︔_⊢_ Δ Γ where
     : Δ ︔ ∅ ⊢ A
       --------------
     → Δ ︔ Γ ⊢ □ A
-  mlet
+  mlet_`in_
     : Δ     ︔ Γ ⊢ □ A
     → Δ , A ︔ Γ ⊢ B
       ---------------
@@ -81,14 +81,13 @@ m# n  =  ᵒ count n
 -- Examples
 
 K : ∅ ︔ ∅ ⊢ □ (A →̇ B) →̇ □ A →̇ □ B
-K = ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ ᵒ (S Z) · ᵒ Z ⌝)
- -- ƛ ƛ mlet (# 1) (mlet (# 0) ⌜ {!!} · (m# 0) ⌝) 
+K = ƛ ƛ mlet # 1 `in mlet # 0 `in ⌜ ᵒ (S Z) · ᵒ Z ⌝
 
 _ : ∅ ︔ ∅ ⊢ □ (A ×̇ B) →̇ □ A ×̇ □ B
-_ = ƛ ⟨ mlet (# 0) ⌜ proj₁ m# 0 ⌝ , mlet (# 0) ⌜ proj₂ m# 0 ⌝  ⟩
+_ = ƛ ⟨ mlet # 0 `in ⌜ proj₁ m# 0 ⌝ , mlet # 0 `in ⌜ proj₂ m# 0 ⌝  ⟩
 
 _ : ∅ ︔ ∅ ⊢  □ A ×̇ □ B →̇ □ (A ×̇ B) 
-_ = ƛ mlet (proj₁ # 0) (mlet (proj₂ # 0) ⌜ ⟨ m# 1 , m# 0 ⟩ ⌝)
+_ = ƛ mlet proj₁ # 0 `in mlet proj₂ # 0 `in ⌜ ⟨ m# 1 , m# 0 ⟩ ⌝
 ------------------------------------------------------------------------------
 -- Substitution
 
@@ -111,7 +110,8 @@ rename ρ₁ ρ₂ ⟨ M , N ⟩  = ⟨ rename ρ₁ ρ₂ M , rename ρ₁ ρ�
 rename ρ₁ ρ₂ (proj₁ L)  = proj₁ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ ⌜ M ⌝      = ⌜ rename id ρ₂ M ⌝
-rename ρ₁ ρ₂ (mlet N M) = mlet (rename ρ₁ ρ₂ N) (rename ρ₁ (ext ρ₂) M)
+rename ρ₁ ρ₂ (mlet N `in M) =
+  mlet rename ρ₁ ρ₂ N `in rename ρ₁ (ext ρ₂) M
 
 wk
   : Δ ︔ Γ     ⊢ A
@@ -154,7 +154,8 @@ _⟪_︔_⟫
 (proj₁ L) ⟪ σ₁ ︔ σ₂ ⟫ = proj₁ (L ⟪ σ₁ ︔ σ₂ ⟫)
 (proj₂ L) ⟪ σ₁ ︔ σ₂ ⟫ = proj₂ (L ⟪ σ₁ ︔ σ₂ ⟫)
 ⌜ M ⌝     ⟪ σ₁ ︔ σ₂ ⟫ = ⌜ M ⟪ `_ ︔ σ₂ ⟫ ⌝
-mlet N M  ⟪ σ₁ ︔ σ₂ ⟫ = mlet (N ⟪ σ₁ ︔ σ₂ ⟫) (M ⟪ mwk ∘ σ₁ ︔ mexts σ₂ ⟫)
+(mlet N `in M) ⟪ σ₁ ︔ σ₂ ⟫ =
+  mlet N ⟪ σ₁ ︔ σ₂ ⟫ `in M ⟪ mwk ∘ σ₁ ︔ mexts σ₂ ⟫
 
 subst-zero 
   : Δ ︔ Γ ⊢ B
@@ -188,7 +189,7 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
     : Δ ︔ Γ ⊢ (ƛ M) · N -→ M [ N ]
 
   β-⌜⌝mlet
-    : Δ ︔ Γ ⊢ mlet ⌜ N ⌝ M -→ M m[ N ]
+    : Δ ︔ Γ ⊢ mlet ⌜ N ⌝ `in M -→ M m[ N ]
 
   β-⟨,⟩proj₁
     : Δ ︔ Γ ⊢ proj₁ ⟨ M , N ⟩ -→ M
@@ -230,23 +231,23 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
 
   ξ-mlet₁
     : Δ ︔ Γ ⊢ N -→ N′
-    → Δ ︔ Γ ⊢ mlet N M -→ mlet N′ M
+    → Δ ︔ Γ ⊢ mlet N `in M -→ mlet N′ `in M
 
   ξ-mlet₂
     : Δ , A ︔ Γ ⊢ M -→ M′
-    → Δ     ︔ Γ ⊢ mlet N M -→ mlet N M′
+    → Δ     ︔ Γ ⊢ mlet N `in M -→ mlet N `in M′
 
   δ-proj₁-mlet
-    : Δ ︔ Γ ⊢ proj₁ (mlet N M) -→ mlet N (proj₁ M)
+    : Δ ︔ Γ ⊢ proj₁ (mlet N `in M) -→ mlet N `in proj₁ M
 
   δ-proj₂-mleqt
-    : Δ ︔ Γ ⊢ proj₂ (mlet N M) -→ mlet N (proj₂ M)
+    : Δ ︔ Γ ⊢ proj₂ (mlet N `in M) -→ mlet N `in proj₂ M
 
   δ-·-mlet
-    : Δ ︔ Γ ⊢ (mlet N L) · M -→ mlet N (L · mwk M)
+    : Δ ︔ Γ ⊢ (mlet N `in L) · M -→ mlet N `in L · mwk M
 
   δ-mlet-mlet
-    : Δ ︔ Γ ⊢ mlet (mlet N L) M -→ mlet N (mlet L (mwk M))
+    : Δ ︔ Γ ⊢ mlet (mlet N `in L) `in M -→ mlet N `in mlet L `in (mwk M)
 
 ------------------------------------------------------------------------------
 -- Multi-step beta-reduction
@@ -325,7 +326,7 @@ progress (proj₂ MN) with progress MN
 ... | step M-→N      = step (ξ-proj₂ M-→N)
 ... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
 progress ⌜ M ⌝       = done ⌜ M ⌝
-progress (mlet N M) with progress N
+progress (mlet N `in M) with progress N
 ... | step N-→N′ = step (ξ-mlet₁ N-→N′)
 ... | done ⌜ L ⌝ = step β-⌜⌝mlet
 
@@ -375,12 +376,12 @@ proj₂-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) = proj₂ M -→⟨ ξ-proj₂
 
 mlet-↠₁
   : Δ ︔ Γ ⊢ N -↠ N′
-  → Δ ︔ Γ ⊢ mlet N M -↠ mlet N′ M
-mlet-↠₁ (M ∎)                = mlet M _ ∎
-mlet-↠₁ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ _ -→⟨ ξ-mlet₁ M-→M′ ⟩ mlet-↠₁ M-↠N
+  → Δ ︔ Γ ⊢ mlet N `in M -↠ mlet N′ `in M
+mlet-↠₁ (M ∎)                = mlet M `in _ ∎
+mlet-↠₁ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ `in _ -→⟨ ξ-mlet₁ M-→M′ ⟩ mlet-↠₁ M-↠N
 
 mlet-↠₂
   : Δ , A ︔ Γ ⊢ M        -↠ M′
-  → Δ ︔ Γ     ⊢ mlet N M -↠ mlet N M′
-mlet-↠₂ (M ∎)                = mlet _ M ∎
-mlet-↠₂ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ M -→⟨ ξ-mlet₂ M-→M′ ⟩ mlet-↠₂ M-↠N
+  → Δ ︔ Γ     ⊢ mlet N `in M -↠ mlet N `in M′
+mlet-↠₂ (M ∎)                = mlet _ `in M ∎
+mlet-↠₂ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ `in M -→⟨ ξ-mlet₂ M-→M′ ⟩ mlet-↠₂ M-↠N
