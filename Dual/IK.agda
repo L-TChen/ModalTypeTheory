@@ -106,6 +106,11 @@ rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ ⌜ M ⌝      = ⌜ rename ρ₂ id M ⌝
 rename ρ₁ ρ₂ (mlet N M) = mlet (rename ρ₁ ρ₂ N) (rename ρ₁ (ext ρ₂) M)
 
+mwk₁
+  : Δ ︔ Γ ⊢ A
+  → Δ , B ︔ Γ ⊢ A
+mwk₁ = rename id S_
+
 mweaken
   : (Δ′ : Cxt)
   → Δ      ⧺ Δ′ ︔ Γ ⊢ A
@@ -134,7 +139,7 @@ _⟪_︔_⟫
 (proj₁ L)  ⟪ σ₁ ︔ σ₂ ⟫ = proj₁ (L ⟪ σ₁ ︔ σ₂ ⟫) 
 (proj₂ L)  ⟪ σ₁ ︔ σ₂ ⟫ = proj₂ (L ⟪ σ₁ ︔ σ₂ ⟫)
 ⌜ M ⌝      ⟪ σ₁ ︔ σ₂ ⟫ = ⌜ M ⟪ σ₂ ︔ (λ ()) ⟫ ⌝
-(mlet N M) ⟪ σ₁ ︔ σ₂ ⟫ = mlet (N ⟪ σ₁ ︔ σ₂ ⟫) (M ⟪ rename id S_ ∘ σ₁ ︔ exts σ₂ ⟫)
+(mlet N M) ⟪ σ₁ ︔ σ₂ ⟫ = mlet (N ⟪ σ₁ ︔ σ₂ ⟫) (M ⟪ mwk₁ ∘ σ₁ ︔ exts σ₂ ⟫)
 
 subst-zero
   : Δ ︔ Γ ⊢ B

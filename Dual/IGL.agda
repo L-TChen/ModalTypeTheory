@@ -14,11 +14,11 @@ open import Context public
 
 infix  3 _︔_⊢_
 
-infixr 5 ƛ_
+infixr 5 ƛ_ mfix_
 infix  6 ⟨_,_⟩
 infixr 6 proj₁_ proj₂_
 infixl 7 _·_
-infixl 8 _[_] _m[_]
+infixl 8 _[_] _m[_] _⟪_⟫ _m⟪_⟫
 infix  9 `_ #_
 
 data _︔_⊢_ : Cxt → Cxt → Type → Set
@@ -78,13 +78,7 @@ GL : ∅ ︔ ∅ ⊢ □ (□ A →̇ A) →̇ □ A
 GL = ƛ mlet (# 0) (mfix (# 1 · # 0))
 
 ------------------------------------------------------------------------------
--- Substitution and structural rules 
-
-Subst : Cxt → Cxt → Cxt → Set
-Subst Δ Γ Γ′ = ∀ {A} → Γ ∋ A → Δ ︔ Γ′ ⊢ A
-
-MSubst : Cxt → Cxt → Set
-MSubst Δ Δ′ = ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A
+-- Modal/ordinary variable renaming with structural rules
 
 rename : Rename Γ Γ′
   → Rename Δ Δ′
@@ -100,40 +94,39 @@ rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ (mlet N M) = mlet (rename ρ₁ ρ₂ N) (rename ρ₁ (ext ρ₂) M)
 rename ρ₁ ρ₂ (mfix M)   = mfix rename (ext ρ₂) ρ₂ M 
 
+wk₁
+  : Δ ︔ Γ ⊢ A
+  → Δ ︔ Γ , B ⊢ A
+wk₁ = rename S_ id
+
+m↑_ : ∅ ︔ Γ ⊢ A → Δ ︔ Γ ⊢ A
+m↑_ = rename id λ ()
+
+mwk₁
+  : Δ ︔ Γ ⊢ A
+  → Δ , B ︔ Γ ⊢ A
+mwk₁ = rename id S_
+
+mwk
+  : ∀ Δ′ 
+  → Δ     ⧺ Δ′ ︔ Γ ⊢ A
+  → Δ , B ⧺ Δ′ ︔ Γ ⊢ A
+mwk Δ′ = rename id (∋-insert-inbetween Δ′)
+    
+------------------------------------------------------------------------------
+-- Modal/ordinary substitution
+
+Subst : Cxt → Cxt → Cxt → Set
+Subst Δ Γ Γ′ = ∀ {A} → Γ ∋ A → Δ ︔ Γ′ ⊢ A
+
+MSubst : Cxt → Cxt → Set
+MSubst Δ Δ′ = ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ , □ A ⊢ A
+
 exts
   : Subst Δ Γ Γ′ 
   → Subst Δ (Γ , B) (Γ′ , B)
 exts σ Z     = ` Z
 exts σ (S p) = rename S_ id (σ p)
-
-subst : Subst Δ Γ Γ′
-  → Δ ︔ Γ  ⊢ A
-  → Δ ︔ Γ′ ⊢ A
-subst σ (` x)      = σ x
-subst σ (ƛ M)      = ƛ subst (exts σ) M
-subst σ (M · N)    = subst σ M · subst σ N
-subst σ ⟨⟩         = ⟨⟩
-subst σ ⟨ M , N ⟩  = ⟨ subst σ M , subst σ N ⟩
-subst σ (proj₁ M)  = proj₁ subst σ M
-subst σ (proj₂ N)  = proj₂ subst σ N
-subst σ (mlet L M) = mlet (subst σ L) (subst (rename id S_ ∘ σ) M)
-subst σ (mfix M )  = mfix M
-
-_[_] : Δ ︔ (Γ , B) ⊢ A
-     → Δ ︔ Γ ⊢ B
-     → Δ ︔ Γ ⊢ A
-_[_] {Δ} {Γ} {B} M N = subst σ M
-  where
-  σ : ∀ {A} → Γ , B ∋ A → Δ ︔ Γ ⊢ A
-  σ Z      =  N 
-  σ (S x)  =  ` x  
-
-wk₁ : Δ ︔ Γ ⊢ A
-    → Δ ︔ Γ , B ⊢ A
-wk₁ = rename S_ id
-
-------------------------------------------------------------------------------
--- Modal substitution and structural rules 
 
 mexts
   : MSubst Δ Δ′
@@ -145,46 +138,59 @@ mexts σ (S x) =  rename σ′ S_ (σ x)
     σ′ Z     = Z
     σ′ (S x) = S (S x)
 
-msubst 
-  : MSubst Δ Δ′
-  → Δ  ︔ Γ ⊢ A
+_⟪_⟫ : Δ ︔ Γ ⊢ A
+  → Subst Δ Γ Γ′
+  → Δ ︔ Γ′ ⊢ A
+(` x)     ⟪ σ ⟫ = σ x  
+(ƛ M)     ⟪ σ ⟫ = {!!} 
+(M · N)   ⟪ σ ⟫ = (M ⟪ σ ⟫) · (N ⟪ σ ⟫) 
+⟨⟩        ⟪ σ ⟫ = ⟨⟩ 
+⟨ M , N ⟩ ⟪ σ ⟫ = ⟨ M ⟪ σ ⟫ , N ⟪ σ ⟫ ⟩ 
+(proj₁ L) ⟪ σ ⟫ = proj₁ (L ⟪ σ ⟫) 
+(proj₂ L) ⟪ σ ⟫ = proj₂ (L ⟪ σ ⟫) 
+mlet N M  ⟪ σ ⟫ = mlet (N ⟪ σ ⟫) (M ⟪ mwk₁ ∘ σ ⟫) 
+(mfix M)  ⟪ σ ⟫ = mfix M 
+
+subst-zero
+  : Δ ︔ Γ ⊢ B
+  → Subst Δ (Γ , B) Γ
+subst-zero N Z     = N
+subst-zero N (S x) = ` x
+
+_[_] : Δ ︔ (Γ , B) ⊢ A
+     → Δ ︔ Γ ⊢ B
+     → Δ ︔ Γ ⊢ A
+_[_] M N = M ⟪ subst-zero N ⟫
+
+_m⟪_⟫ 
+  : Δ ︔ Γ ⊢ A
+  → MSubst Δ Δ′
   → Δ′ ︔ Γ ⊢ A
-msubst                  σ (` x)      = ` x
-msubst                  σ (ƛ M)      = ƛ msubst σ M
-msubst                  σ (M · N)    = msubst σ M · msubst σ N
-msubst                  σ ⟨⟩         = ⟨⟩
-msubst                  σ ⟨ M , N ⟩  = ⟨ msubst σ M , msubst σ N ⟩
-msubst                  σ (proj₁ M)  = proj₁ msubst σ M
-msubst                  σ (proj₂ M)  = proj₂ msubst σ M
-msubst                  σ (mlet L M) = mlet (msubst σ L)  (msubst (mexts σ) M)
-msubst {Δ} {Δ′} {Γ} {A} σ (mfix M)   = mfix (subst (exts mσ) (msubst (wk₁ ∘ mσ) M))
+(` x)     m⟪ σ ⟫ = ` x 
+(ƛ M)     m⟪ σ ⟫ = ƛ (M m⟪ σ ⟫) 
+(M · N)   m⟪ σ ⟫ = (M m⟪ σ ⟫) · (N m⟪ σ ⟫) 
+⟨⟩        m⟪ σ ⟫ = ⟨⟩ 
+⟨ M , N ⟩ m⟪ σ ⟫ = ⟨ M m⟪ σ ⟫ , N m⟪ σ ⟫ ⟩ 
+(proj₁ L) m⟪ σ ⟫ = proj₁ (L m⟪ σ ⟫) 
+(proj₂ L) m⟪ σ ⟫ = proj₂ (L m⟪ σ ⟫) 
+mlet N M  m⟪ σ ⟫ = mlet (N m⟪ σ ⟫) (M m⟪ mexts σ ⟫) 
+_m⟪_⟫ {Δ} {Γ} {A} {Δ′} (mfix M) σ = mfix M m⟪ wk₁ ∘ mσ ⟫ ⟪ exts mσ ⟫
   where 
     mσ : ∀ {A} → Δ ∋ A → Δ′ ︔ Δ′ ⊢ A
     mσ x = (σ x [ mfix (σ x) ])
+
+msubst-zero
+  : Δ ︔ Δ , □ B ⊢ B
+  → MSubst (Δ , B) Δ
+msubst-zero N Z     = N
+msubst-zero N (S x) = ` (S x)
   
 _m[_]
   : Δ , B ︔ Γ ⊢ A
   → Δ ︔ Δ , □ B ⊢ B
   → Δ ︔ Γ ⊢ A
-_m[_] {Δ} {B} {Γ} M N = msubst σ₁ M 
-  where
-    σ₁ : MSubst (Δ , B) Δ
-    σ₁ Z     = N
-    σ₁ (S x) = wk₁ (` x)
+M m[ N ] = M m⟪ msubst-zero N ⟫
 
-m↑_ : ∅ ︔ Γ ⊢ A → Δ ︔ Γ ⊢ A
-m↑_ = rename id λ ()
-
-mwk
-  : ∀ Δ′ 
-  → Δ     ⧺ Δ′ ︔ Γ ⊢ A
-  → Δ , B ⧺ Δ′ ︔ Γ ⊢ A
-mwk Δ′ = rename id (σ Δ′)
-  where
-    σ : ∀ Δ′ → Rename (Δ ⧺ Δ′) (Δ , B ⧺ Δ′)
-    σ Δ′ x with ⧺-∋ Δ′ x
-    ... | inj₁ Δ∋A = ∋-⧺⁺ˡ (S Δ∋A)
-    ... | inj₂ Γ∋A = ∋-⧺⁺ʳ (_ , _) Γ∋A
 ------------------------------------------------------------------------------
 -- More examples
 -- The usual (□-intro) can be defined by mfix
