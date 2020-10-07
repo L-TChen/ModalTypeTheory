@@ -260,7 +260,7 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
   δ-proj₁-mlet
     : Δ ︔ Γ ⊢ proj₁ (mlet N `in M) -→ mlet N `in (proj₁ M)
 
-  δ-proj₂-mleqt
+  δ-proj₂-mlet
     : Δ ︔ Γ ⊢ proj₂ (mlet N `in M) -→ mlet N `in (proj₂ M)
 
   δ-·-mlet
