@@ -60,13 +60,7 @@ data _⊢_ Γ where
 # n  =  ` count n
 
 ------------------------------------------------------------------------------
--- Substitution
-
-Rename : Cxt → Cxt → Set
-Rename Γ Γ′ = (∀ {A} → Γ ∋ A → Γ′ ∋ A)
-
-Subst : Cxt → Cxt → Set
-Subst Γ Γ′ = (∀ {A} → Γ ∋ A → Γ′ ⊢ A)
+-- Variable renaming
 
 rename : Rename Γ Γ′
   → Γ  ⊢ A
@@ -78,6 +72,12 @@ rename ρ ⟨⟩         = ⟨⟩
 rename ρ ⟨ M , N ⟩  = ⟨ rename ρ M , rename ρ N ⟩
 rename ρ (proj₁ M)  = proj₁ rename ρ M
 rename ρ (proj₂ N)  = proj₂ rename ρ N
+
+------------------------------------------------------------------------------
+-- Substitution
+
+Subst : Cxt → Cxt → Set
+Subst Γ Γ′ = (∀ {A} → Γ ∋ A → Γ′ ⊢ A)
 
 exts
   : Subst Γ Γ′
@@ -106,7 +106,7 @@ subst-zero N (S x) = ` x
 _[_] : Γ , B ⊢ A
      → Γ ⊢ B
      → Γ ⊢ A
-_[_] {Γ} {B} M N = M ⟪ subst-zero N ⟫
+M [ N ] = M ⟪ subst-zero N ⟫
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
