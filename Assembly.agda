@@ -180,20 +180,6 @@ X × Y = record { _⊩_ = _⊩_ ; realiserOf = h }
 □_ : Asm → Asm
 □ X = ∥ ☒ X ∥
 ------------------------------------------------------------------------------
--- Some morphisms in the category of assemblies
-
-S4-GL-reflection : (X : Asm) → Trackable (☒ ∥ X ∥) X
-S4-GL-reflection X = f , (ƛ # 0) , idTracksf
-  where
-    open Asm (☒ ∥ X ∥) renaming (Carrier to ☒X₀; realiserOf to r)
-
-    f : (☒ ∥ X ∥) .Carrier → X .Carrier
-    f (M , |x| , x , M⊩x) = x
-
-    idTracksf : track (☒ ∥ X ∥) X (ƛ # 0) f
-    idTracksf M (N , x , y , N⊩y) M≡N = M , ((_ -→⟨ β-ƛ· ⟩ _ ∎) , subst _ M≡N N⊩y)
-    
-------------------------------------------------------------------------------
 -- The following is consistent with HA and seems even desirable.
 
 CP : (X : Asm) → Trackable X (□ X)
@@ -232,6 +218,20 @@ biimp X Y f g = f , g ,
 truncation≅□ : (X : Asm) → ∥ X ∥ ≅ □ X
 truncation≅□ X = biimp X (☒ X) (irr-irrbox X) (irrbox-irr X)
 
+------------------------------------------------------------------------------
+-- Some morphisms in the category of assemblies
+
+S4-GL-reflection : (X : Asm) → Trackable (☒ ∥ X ∥) X
+S4-GL-reflection X = f , (ƛ # 0) , idTracksf
+  where
+    open Asm (☒ ∥ X ∥) renaming (Carrier to ☒X₀; realiserOf to r)
+
+    f : (☒ ∥ X ∥) .Carrier → X .Carrier
+    f (M , |x| , x , M⊩x) = x
+
+    idTracksf : track (☒ ∥ X ∥) X (ƛ # 0) f
+    idTracksf M (N , x , y , N⊩y) M≡N = M , ((_ -→⟨ β-ƛ· ⟩ _ ∎) , subst _ M≡N N⊩y)
+    
 -- the above just follows the fact that for mere propositions X, Y
 -- functions X → Y and Y → X suffice to construct a quasi-equivalence between X and Y.
 
