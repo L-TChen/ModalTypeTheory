@@ -22,7 +22,7 @@ open _⊢_
 open Type
 open Value
 
---open import STLC.BigStep
+import STLC.BigStep
     
 infix 2 Σ[∶]-syntax Σ[]-syntax
 
@@ -169,6 +169,22 @@ module Assembly where
         where
           helper : X₀ → C.∥ Σ[ M ] Σ[ x ] M ⊩x x ∥
           helper x = C.rec propTruncIsProp (λ {(M , M⊩x) → ∣ M , x , M⊩x ∣}) (f x)
+
+  quotation : (X : Asm) → Trackable X ∥ ☒ X ∥ 
+  quotation X = (λ x → C.rec propTruncIsProp (λ { (M , M⊩x) → ∣ M , x , M⊩x ∣}) (f x)) ,
+    ƛ # 0 , λ M x M⊩x → M , (_ -→⟨ β-ƛ· ⟩ _ ∎) , (M , x , M⊩x) , refl
+    where
+      open Asm X renaming (Carrier to X₀; _⊩_ to _⊩x_; realiserOf to f)
+
+  irr-irrbox : (X : Asm) → Trackable ∥ X ∥ ∥ ☒ X ∥ 
+  irr-irrbox X = g , (ƛ # 0) , (λ M x M⊩x → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , ((M , M⊩x) , refl)))
+    where
+      open Asm ∥ X ∥ renaming (Carrier to ∥X∥₀; _⊩_ to _⊩_; realiserOf to g)
+
+  eval : (X : Asm) → Trackable (☒ X) X
+  eval X = (λ { (_ , x , _) → x}) , (ƛ # 0) , (λ {M (N , x , N⊩x) M≡N → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , subst _ (sym M≡N) N⊩x) } )
+    where
+      open Asm (☒ X) renaming (Carrier to ☒X₀; realiserOf to f)
 
 open Assembly
 
