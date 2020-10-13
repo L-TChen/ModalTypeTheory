@@ -14,15 +14,9 @@ open import Cubical.HITs.PropositionalTruncation as C
   using (∣_∣; propTruncIsProp)
 import Cubical.Data.Unit                         as C
 
---open import Relation.Nullary
-
 open import STLC
-  hiding (_,_)
+  hiding (_,_; □_)
 open _⊢_
-open Type
-open Value
-
---import STLC.BigStep
 
 rec2 : {X Y : 𝓤} {P : 𝓤} → isProp P → (X → Y → P) → C.∥ X ∥ → C.∥ Y ∥ → P
 rec2 Pprop f = C.rec (isPropΠ λ _ → Pprop) (C.rec Pprop ∘ f) 
@@ -32,6 +26,7 @@ private
     A B : Type
     Γ Δ : Cxt
     
+infix  4 _≅_
 infixr 7 _⇒_
 infixr 8 _×_
 infix  9 ☒_
@@ -149,6 +144,9 @@ X × Y = record { _⊩_ = _⊩_ ; realiserOf = h }
     g : isRealisable intensions _⊩_
     g (M , x , M⊩x) = ∣ M , refl ∣
 
+-- This truncation is stronger than the usual truncation of assemblies as given in (Uemura, 2019),
+-- a proof of realisability consists of an element to realise.
+
 ∥_∥ : Asm → Asm
 ∥ X ∥  = record { _⊩_ = _⊩_ ; realiserOf = g }
   where
@@ -163,24 +161,26 @@ X × Y = record { _⊩_ = _⊩_ ; realiserOf = h }
         helper : X₀ → ∃[ M ∈ _ ] Σ[ x ∈ _ ] M ⊩x x
         helper x = C.rec propTruncIsProp (λ {(M , M⊩x) → ∣ M , x , M⊩x ∣}) (f x)
 
-------------------------------------------------------------------------------
--- Some morphisms in the category of assemblies
-
-quotation : (X : Asm) → Trackable X ∥ ☒ X ∥ 
-quotation X = (λ x → C.rec propTruncIsProp (λ { (M , M⊩x) → ∣ M , x , M⊩x ∣}) (f x)) ,
-  ƛ # 0 , λ M x M⊩x → M , (_ -→⟨ β-ƛ· ⟩ _ ∎) , (M , x , M⊩x) , refl
+-- This is the standard truncation of assemblies.
+∥_∥′ : Asm → Asm
+∥ X ∥′ = record { _⊩_ = _⊩_ ; realiserOf = g }
   where
     open Asm X renaming (Carrier to X₀; _⊩_ to _⊩x_; realiserOf to f)
 
-irr-irrbox : (X : Asm) → Trackable ∥ X ∥ ∥ ☒ X ∥ 
-irr-irrbox X = g , (ƛ # 0) , (λ M x M⊩x → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , ((M , M⊩x) , refl)))
-  where
-    open Asm ∥ X ∥ renaming (Carrier to ∥X∥₀; _⊩_ to _⊩_; realiserOf to g)
+    _⊩_ : Prog _ → C.∥ X₀ ∥ → 𝓤
+    M ⊩ x = ∃[ y ∈ _ ] M ⊩x y
 
-eval : (X : Asm) → Trackable (☒ X) X
-eval X = (λ { (_ , x , _) → x}) , (ƛ # 0) , (λ {M (N , x , N⊩x) M≡N → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , subst _ M≡N N⊩x) } )
-  where
-    open Asm (☒ X) renaming (Carrier to ☒X₀; realiserOf to f)
+    g : isRealisable C.∥ X₀ ∥ _⊩_
+    g = C.rec propTruncIsProp helper
+      where
+        helper : X₀ → ∃[ M ∈ _ ] ∃[ x ∈ _ ] M ⊩x x
+        helper x =
+          C.rec propTruncIsProp (λ {(M , M⊩x) → ∣ M , ∣ x , M⊩x ∣ ∣}) (f x)
+
+□_ : Asm → Asm
+□ X = ∥ ☒ X ∥
+------------------------------------------------------------------------------
+-- Some morphisms in the category of assemblies
 
 S4-GL-reflection : (X : Asm) → Trackable (☒ ∥ X ∥) X
 S4-GL-reflection X = f , (ƛ # 0) , idTracksf
@@ -192,6 +192,48 @@ S4-GL-reflection X = f , (ƛ # 0) , idTracksf
 
     idTracksf : track (☒ ∥ X ∥) X (ƛ # 0) f
     idTracksf M (N , x , y , N⊩y) M≡N = M , ((_ -→⟨ β-ƛ· ⟩ _ ∎) , subst _ M≡N N⊩y)
+    
+------------------------------------------------------------------------------
+-- The following is consistent with HA and seems even desirable.
+
+CP : (X : Asm) → Trackable X (□ X)
+CP X = (λ x → C.rec propTruncIsProp (λ { (M , M⊩x) → ∣ M , x , M⊩x ∣}) (f x)) ,
+  ƛ # 0 , λ M x M⊩x → M , (_ -→⟨ β-ƛ· ⟩ _ ∎) , (M , x , M⊩x) , refl
+  where
+    open Asm X renaming (Carrier to X₀; _⊩_ to _⊩x_; realiserOf to f)
+
+mapTrunc : (X Y : Asm) → Trackable X Y → Trackable ∥ X ∥ ∥ Y ∥
+mapTrunc _ _ (f , L , L⊩f) = C.map f , L , helper
+  where
+    helper : _
+    helper M |x| (x , M⊩x) with L⊩f M x M⊩x
+    ... | N , LM-↠N , N⊩fx = N , LM-↠N , (f x) , N⊩fx
+
+eval : (X : Asm) → Trackable (☒ X) X
+eval X = (λ { (_ , x , _) → x})
+  , (ƛ # 0)
+  , λ {M (N , x , N⊩x) M≡N → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , subst _ M≡N N⊩x) }
+  where
+    open Asm (☒ X) renaming (Carrier to ☒X₀; realiserOf to f)
+
+irrbox-irr : (X : Asm) → Trackable (□ X) ∥ X ∥
+irrbox-irr X = mapTrunc (☒ X) X (eval X)
+
+irr-irrbox : (X : Asm) → Trackable ∥ X ∥ (□ X) 
+irr-irrbox X = g , (ƛ # 0) , (λ M x M⊩x → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , ((M , M⊩x) , refl)))
+  where
+    open Asm ∥ X ∥ renaming (Carrier to ∥X∥₀; _⊩_ to _⊩_; realiserOf to g)
+
+biimp : (X Y : Asm) → Trackable ∥ X ∥ ∥ Y ∥ → Trackable ∥ Y ∥ ∥ X ∥ → ∥ X ∥ ≅ ∥ Y ∥
+biimp X Y f g = f , g ,
+  (funExt (λ x → propTruncIsProp (fst f (fst g x)) x)) ,
+  (funExt (λ x → propTruncIsProp (fst g (fst f x)) x))
+
+truncation≅□ : (X : Asm) → ∥ X ∥ ≅ □ X
+truncation≅□ X = biimp X (☒ X) (irr-irrbox X) (irrbox-irr X)
+
+-- the above just follows the fact that for mere propositions X, Y
+-- functions X → Y and Y → X suffice to construct a quasi-equivalence between X and Y.
 
 -- ⟦_⟧ₜ       : Type → Asm
 -- ⟦ ⊤̇     ⟧ₜ = Unitₐ
