@@ -12,7 +12,7 @@ private
     M N L M′ N′ L′ : Δ ︔ Γ ⊢ A
 
 infix 2 _︔_⊢_~_
-data _︔_⊢_~_ : (Δ Γ : Cxt) → (M N : Δ ︔ Γ ⊢ A) → Set where
+data _︔_⊢_~_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
   `_ : (x : Γ ∋ A)
        ---------
      → Δ ︔ Γ ⊢ ` x ~ ` x
@@ -47,83 +47,85 @@ data _︔_⊢_~_ : (Δ Γ : Cxt) → (M N : Δ ︔ Γ ⊢ A) → Set where
   mfix! : Δ ︔ Γ ⊢ mfix M ~ mfix M′
 
 ~-refl : Δ ︔ Γ ⊢ M ~ M
-~-refl {M = ` x} = ` x
-~-refl {M = ƛ M} = ƛ ~-refl
-~-refl {M = M · M₁} = ~-refl · ~-refl
-~-refl {M = ⟨⟩} = ⟨⟩
-~-refl {M = ⟨ M , N ⟩} = ⟨ ~-refl , ~-refl ⟩
-~-refl {M = proj₁ M} = proj₁ ~-refl
-~-refl {M = proj₂ M} = proj₂ ~-refl
+~-refl {M = ` x}          = ` x
+~-refl {M = ƛ M}          = ƛ ~-refl
+~-refl {M = M · N}        = ~-refl · ~-refl
+~-refl {M = ⟨⟩}           = ⟨⟩
+~-refl {M = ⟨ M , N ⟩}    = ⟨ ~-refl , ~-refl ⟩
+~-refl {M = proj₁ M}      = proj₁ ~-refl
+~-refl {M = proj₂ M}      = proj₂ ~-refl
 ~-refl {M = mlet M `in N} = mlet ~-refl `in ~-refl
-~-refl {M = mfix M} = mfix!
+~-refl {M = mfix M}       = mfix!
 
 ~-rename
-  : ∀ {Δ Δ′ Γ Γ′}
-  → (ρ₁ : Rename Γ Γ′)
+  : (ρ₁ : Rename Γ Γ′)
   → (ρ₂ : Rename Δ Δ′)
-  → {M M′ : Δ ︔ Γ ⊢ A}
-  → Δ ︔ Γ ⊢ M ~ M′
+  → Δ  ︔ Γ  ⊢ M ~ M′
   → Δ′ ︔ Γ′ ⊢ rename ρ₁ ρ₂ M ~ rename ρ₁ ρ₂ M′
-~-rename ρ₁ ρ₂ (` x) = ` ρ₁ x
-~-rename ρ₁ ρ₂ (ƛ M~M′) = ƛ ~-rename (ext ρ₁) ρ₂ M~M′
-~-rename ρ₁ ρ₂ (M~M′ · N~N′) = ~-rename ρ₁ ρ₂ M~M′ · ~-rename ρ₁ ρ₂ N~N′
-~-rename ρ₁ ρ₂ ⟨⟩ = ⟨⟩
+~-rename ρ₁ ρ₂ (` x)           = ` ρ₁ x
+~-rename ρ₁ ρ₂ (ƛ M~M′)        = ƛ ~-rename (ext ρ₁) ρ₂ M~M′
+~-rename ρ₁ ρ₂ (M~M′ · N~N′)   = ~-rename ρ₁ ρ₂ M~M′ · ~-rename ρ₁ ρ₂ N~N′
+~-rename ρ₁ ρ₂ ⟨⟩              = ⟨⟩
 ~-rename ρ₁ ρ₂ ⟨ M~M′ , N~N′ ⟩ = ⟨ ~-rename ρ₁ ρ₂ M~M′ , ~-rename ρ₁ ρ₂ N~N′ ⟩
-~-rename ρ₁ ρ₂ (proj₁ M~M′) = proj₁ ~-rename ρ₁ ρ₂ M~M′
-~-rename ρ₁ ρ₂ (proj₂ M~M′) = proj₂ ~-rename ρ₁ ρ₂ M~M′
-~-rename ρ₁ ρ₂ (mlet M~M′ `in N~N′) = mlet (~-rename ρ₁ ρ₂ M~M′) `in (~-rename ρ₁ (ext ρ₂) N~N′)
+~-rename ρ₁ ρ₂ (proj₁ M~M′)    = proj₁ ~-rename ρ₁ ρ₂ M~M′
+~-rename ρ₁ ρ₂ (proj₂ M~M′)    = proj₂ ~-rename ρ₁ ρ₂ M~M′
+~-rename ρ₁ ρ₂ (mlet M~M′ `in N~N′) =
+  mlet (~-rename ρ₁ ρ₂ M~M′) `in (~-rename ρ₁ (ext ρ₂) N~N′)
 ~-rename ρ₁ ρ₂ mfix! = mfix!
 
 ~-exts 
   : {σ σ′ : Subst Δ Γ Γ′}
   → (∀ {A} → (x : Γ ∋ A) → Δ ︔ Γ′ ⊢ σ x ~ σ′ x)
   → (∀ {A B} → (x : Γ , B ∋ A) →  Δ ︔ Γ′ , B ⊢ exts σ x ~ exts σ′ x)
-~-exts σ~σ′ Z = ` Z
+~-exts σ~σ′ Z     = ` Z
 ~-exts σ~σ′ (S x) = ~-rename S_ id (σ~σ′ x)
 
 ~-⟪⟫
-  : {M M′ : Δ ︔ Γ ⊢ A} {σ σ′ : Subst Δ Γ Γ′}
+  : {σ σ′ : Subst Δ Γ Γ′}
   → Δ ︔ Γ ⊢ M ~ M′
   → (∀ {A} → (x : Γ ∋ A) → Δ ︔ Γ′ ⊢ σ x ~ σ′ x)
   → Δ ︔ Γ′ ⊢ M ⟪ σ ⟫ ~ M′ ⟪ σ′ ⟫
-~-⟪⟫ (` x) σ~σ′ = σ~σ′ x
-~-⟪⟫ (ƛ M~M′) σ~σ′ = ƛ (~-⟪⟫ M~M′ (~-exts σ~σ′))
-~-⟪⟫ (M~M′ · N~N′) σ~σ′ = ~-⟪⟫ M~M′ σ~σ′ · ~-⟪⟫ N~N′ σ~σ′
-~-⟪⟫ ⟨⟩ σ~σ′ = ⟨⟩
+~-⟪⟫ (` x)           σ~σ′ = σ~σ′ x
+~-⟪⟫ (ƛ M~M′)        σ~σ′ = ƛ (~-⟪⟫ M~M′ (~-exts σ~σ′))
+~-⟪⟫ (M~M′ · N~N′)   σ~σ′ = ~-⟪⟫ M~M′ σ~σ′ · ~-⟪⟫ N~N′ σ~σ′
+~-⟪⟫ ⟨⟩              σ~σ′ = ⟨⟩
 ~-⟪⟫ ⟨ M~M′ , N~N′ ⟩ σ~σ′ = ⟨ ~-⟪⟫ M~M′ σ~σ′ , ~-⟪⟫ N~N′ σ~σ′ ⟩
-~-⟪⟫ (proj₁ M~M′) σ~σ′ = proj₁ ~-⟪⟫ M~M′ σ~σ′
-~-⟪⟫ (proj₂ M~M′) σ~σ′ = proj₂ ~-⟪⟫ M~M′ σ~σ′
-~-⟪⟫ (mlet M~M′ `in N~N′) σ~σ′ = mlet ~-⟪⟫ M~M′ σ~σ′ `in ~-⟪⟫ N~N′ (λ x → ~-rename id S_ (σ~σ′ x))
-~-⟪⟫ mfix! σ~σ′ = mfix!
+~-⟪⟫ (proj₁ M~M′)    σ~σ′ = proj₁ ~-⟪⟫ M~M′ σ~σ′
+~-⟪⟫ (proj₂ M~M′)    σ~σ′ = proj₂ ~-⟪⟫ M~M′ σ~σ′
+~-⟪⟫ (mlet M~M′ `in N~N′) σ~σ′ =
+  mlet ~-⟪⟫ M~M′ σ~σ′ `in ~-⟪⟫ N~N′ (λ x → ~-rename id S_ (σ~σ′ x))
+~-⟪⟫ mfix!           σ~σ′ = mfix!
 
 ~-subst-zero
   : Δ ︔ Γ ⊢ N ~ N′
-  → ∀ {A} → (x : Γ , B ∋ A) → Δ ︔ Γ ⊢ subst-zero N x ~ subst-zero N′ x
+  → (x : Γ , B ∋ A)
+  → Δ ︔ Γ ⊢ subst-zero N x ~ subst-zero N′ x
 ~-subst-zero N~N′ Z     = N~N′
 ~-subst-zero N~N′ (S x) = ` x
 
 ~-[] : Δ ︔ (Γ , B) ⊢ M ~ M′
-     → Δ ︔ Γ ⊢ N ~ N′
-     → Δ ︔ Γ ⊢ M [ N ] ~ M′ [ N′ ]
+     → Δ ︔ Γ       ⊢ N ~ N′
+     → Δ ︔ Γ       ⊢ M [ N ] ~ M′ [ N′ ]
 ~-[] M~M′ N~N′ = ~-⟪⟫ M~M′ (~-subst-zero N~N′)
 
 ~-m⟪⟫
-  : {M M′ : Δ ︔ Γ ⊢ A} {σ σ′ : MSubst Δ Δ′}
+  : {σ σ′ : MSubst Δ Δ′}
   → Δ ︔ Γ ⊢ M ~ M′
   → Δ′ ︔ Γ ⊢ M m⟪ σ ⟫ ~ M′ m⟪ σ′ ⟫
-~-m⟪⟫ (` x) = ` x
-~-m⟪⟫ (ƛ M~M′) = ƛ ~-m⟪⟫ M~M′
-~-m⟪⟫ (M~M′ · N~N′) = ~-m⟪⟫ M~M′ · ~-m⟪⟫ N~N′
-~-m⟪⟫ ⟨⟩ = ⟨⟩
+~-m⟪⟫ (` x)           = ` x
+~-m⟪⟫ (ƛ M~M′)        = ƛ ~-m⟪⟫ M~M′
+~-m⟪⟫ (M~M′ · N~N′)   = ~-m⟪⟫ M~M′ · ~-m⟪⟫ N~N′
+~-m⟪⟫ ⟨⟩              = ⟨⟩
 ~-m⟪⟫ ⟨ M~M′ , N~N′ ⟩ = ⟨ ~-m⟪⟫ M~M′ , ~-m⟪⟫ N~N′ ⟩
-~-m⟪⟫ (proj₁ M~M′) = proj₁ ~-m⟪⟫ M~M′
-~-m⟪⟫ (proj₂ M~M′) = proj₂ ~-m⟪⟫ M~M′
-~-m⟪⟫ (mlet M~M′ `in N~N′) = mlet ~-m⟪⟫ M~M′ `in ~-m⟪⟫ N~N′
+~-m⟪⟫ (proj₁ M~M′)    = proj₁ ~-m⟪⟫ M~M′
+~-m⟪⟫ (proj₂ M~M′)    = proj₂ ~-m⟪⟫ M~M′
+~-m⟪⟫ (mlet M~M′ `in N~N′) =
+  mlet ~-m⟪⟫ M~M′ `in ~-m⟪⟫ N~N′
 ~-m⟪⟫ mfix! = mfix!
 
 ~-m[]
   : Δ , B ︔ Γ ⊢ M ~ M′
-  → Δ ︔ Γ ⊢ M m[ N ] ~ M′ m[ N′ ]
+  → Δ     ︔ Γ ⊢ M m[ N ] ~ M′ m[ N′ ]
 ~-m[] M~M′ = ~-m⟪⟫ M~M′
 
 {-
