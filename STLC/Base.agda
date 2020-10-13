@@ -5,6 +5,7 @@
 module STLC.Base where
 
 open import Data.Nat
+  hiding (_≟_)
 
 open import Context        public
   hiding ([_])

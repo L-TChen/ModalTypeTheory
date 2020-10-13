@@ -8,13 +8,18 @@ module Context where
 open import Data.Nat
 open import Data.Empty
 open import Data.Sum hiding (map)
-open import Relation.Binary.PropositionalEquality as P using (_≡_)
 open import Data.Product using (∃-syntax; _×_; _,_)
+
+open import Relation.Binary.PropositionalEquality as P
+  using (_≡_)
+open import Relation.Nullary
+  using (Dec; yes; no)
 
 open import Type public
 
 infix  3 _∋_
-infixl 4  _,_ _⧺_
+--infix  4 _≟Cxt_
+infixl 4  _,_ _⧺_ 
 
 data Context (Ty : Set) : Set where
   ∅   : Context Ty
@@ -80,6 +85,7 @@ ext ρ (S x)  =  S (ρ x)
 
 Rename : Context Ty → Context Ty → Set
 Rename Γ Γ′ = ∀ {A} → Γ ∋ A → Γ′ ∋ A
+
 ------------------------------------------------------------------------------
 -- Prefix
 
