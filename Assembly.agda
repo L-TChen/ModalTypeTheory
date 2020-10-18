@@ -34,8 +34,8 @@ infix  9 ☒_
 Prog : Type → 𝓤 
 Prog A = ∅ ⊢ A
 
-isRealisable : ∀ X {A} → (Prog A → X → 𝓤) → 𝓤
-isRealisable X _⊩_ = (x : X) → C.∥ Σ[ M ∈ Prog _ ] M ⊩ x ∥
+isRealisable : ∀ (X : 𝓤) {A} → (Prog A → X → 𝓤) → 𝓤
+isRealisable X _⊩_ = (x : X) → ∃[ M ∈ Prog _ ] M ⊩ x
 
 record Asm : 𝓤₁ where
   infix 6 _⊩_
@@ -84,7 +84,7 @@ record Exposure : 𝓤₁ where
 ⊤ = record { _⊩_ = _⊩_ ; realiserOf = f }
   where
     _⊩_ : Prog ⊤̇ → C.Unit → 𝓤
-    M ⊩ tt = _ ⊢ M -↠ ⟨⟩
+    M ⊩ tt = ∅ ⊢ M -↠ ⟨⟩
 
     f : isRealisable C.Unit _⊩_
     f tt = ∣ ⟨⟩ , (⟨⟩ ∎) ∣
@@ -93,7 +93,7 @@ record Exposure : 𝓤₁ where
 ⊥ = record { _⊩_ = _⊩_ ; realiserOf = f }
   where
     _⊩_ : Prog ⊤̇ → E.⊥ → 𝓤
-    _ ⊩ () 
+    M ⊩ () 
     f   : isRealisable E.⊥ _⊩_
     f ()
 
@@ -177,6 +177,13 @@ X × Y = record { _⊩_ = _⊩_ ; realiserOf = h }
         helper x =
           C.rec propTruncIsProp (λ {(M , M⊩x) → ∣ M , ∣ x , M⊩x ∣ ∣}) (f x)
 
+eval : (X : Asm) → Trackable (☒ X) X
+eval X = (λ { (_ , x , _) → x})
+  , (ƛ # 0)
+  , λ {M (N , x , N⊩x) M≡N → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , subst _ M≡N N⊩x) }
+  where
+    open Asm (☒ X) renaming (Carrier to ☒X₀; realiserOf to f)
+
 □_ : Asm → Asm
 □ X = ∥ ☒ X ∥
 ------------------------------------------------------------------------------
@@ -195,17 +202,18 @@ mapTrunc _ _ (f , L , L⊩f) = C.map f , L , helper
     helper M |x| (x , M⊩x) with L⊩f M x M⊩x
     ... | N , LM-↠N , N⊩fx = N , LM-↠N , (f x) , N⊩fx
 
-eval : (X : Asm) → Trackable (☒ X) X
-eval X = (λ { (_ , x , _) → x})
-  , (ƛ # 0)
-  , λ {M (N , x , N⊩x) M≡N → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , subst _ M≡N N⊩x) }
+mapTrunc′ : (X Y : Asm) → Trackable X Y → Trackable ∥ X ∥′ ∥ Y ∥′
+mapTrunc′ X Y (f , L , L⊩f) = (C.map f) , L , {!!}
   where
-    open Asm (☒ X) renaming (Carrier to ☒X₀; realiserOf to f)
+    helper : track ∥ X ∥′ ∥ Y ∥′ L (C.map f)
+    helper M x ∣ y , M⊩y ∣           with L⊩f M y M⊩y
+    ... | N , LM-↠N , N⊩fx = N , LM-↠N , ∣ f y , N⊩fx ∣
+    helper M x (C.squash |y| |y|₁ i) = {!!}
 
-irrbox-irr : (X : Asm) → Trackable (□ X) ∥ X ∥
+irrbox-irr : (X : Asm) → Trackable ∥ ☒ X ∥ ∥ X ∥
 irrbox-irr X = mapTrunc (☒ X) X (eval X)
 
-irr-irrbox : (X : Asm) → Trackable ∥ X ∥ (□ X) 
+irr-irrbox : (X : Asm) → Trackable ∥ X ∥ ∥ ☒ X ∥ 
 irr-irrbox X = g , (ƛ # 0) , (λ M x M⊩x → M , ((_ -→⟨ β-ƛ· ⟩ (_ ∎)) , ((M , M⊩x) , refl)))
   where
     open Asm ∥ X ∥ renaming (Carrier to ∥X∥₀; _⊩_ to _⊩_; realiserOf to g)
@@ -215,9 +223,22 @@ biimp X Y f g = f , g ,
   (funExt (λ x → propTruncIsProp (fst f (fst g x)) x)) ,
   (funExt (λ x → propTruncIsProp (fst g (fst f x)) x))
 
-truncation≅□ : (X : Asm) → ∥ X ∥ ≅ □ X
+truncation≅□ : (X : Asm) → ∥ X ∥ ≅ ∥ ☒ X ∥
 truncation≅□ X = biimp X (☒ X) (irr-irrbox X) (irrbox-irr X)
 
+{-
+If ∥ X ∥ ≅ ∥ ☒ X ∥ and GL for □ holds, then
+
+  (1) ∥ ∥ ⊥ ∥ → ⊥ ∥ → ∥ ⊥ ∥
+
+and moreover by ∥ ⊥ ∥ ≅ ⊥ and ∥ ⊤ ∥ ≅ ⊤
+
+  (2) ∥ ⊥ → ⊥ ∥ → ⊥
+
+Therefore 
+
+      ⊤ → ⊥
+-}
 ------------------------------------------------------------------------------
 -- Some morphisms in the category of assemblies
 
@@ -227,13 +248,10 @@ S4-GL-reflection X = f , (ƛ # 0) , idTracksf
     open Asm (☒ ∥ X ∥) renaming (Carrier to ☒X₀; realiserOf to r)
 
     f : (☒ ∥ X ∥) .Carrier → X .Carrier
-    f (M , |x| , x , M⊩x) = x
+    f (M , |x| , y , M⊩y) = y
 
     idTracksf : track (☒ ∥ X ∥) X (ƛ # 0) f
     idTracksf M (N , x , y , N⊩y) M≡N = M , ((_ -→⟨ β-ƛ· ⟩ _ ∎) , subst _ M≡N N⊩y)
-    
--- the above just follows the fact that for mere propositions X, Y
--- functions X → Y and Y → X suffice to construct a quasi-equivalence between X and Y.
 
 -- ⟦_⟧ₜ       : Type → Asm
 -- ⟦ ⊤̇     ⟧ₜ = Unitₐ
