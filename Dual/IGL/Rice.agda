@@ -58,15 +58,15 @@ data _︔_⊢_~_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
 ~-refl {M = mfix M}       = mfix!
 
 ~-sym : Δ ︔ Γ ⊢ M ~ M′ → Δ ︔ Γ ⊢ M′ ~ M
-~-sym (` x) = ` x
-~-sym (ƛ M~M′) = ƛ ~-sym M~M′
-~-sym (M~M′ · N~N′) = ~-sym M~M′ · ~-sym N~N′
-~-sym ⟨⟩ = ⟨⟩
-~-sym ⟨ M~M′ , N~N′ ⟩ = ⟨ ~-sym M~M′ , ~-sym N~N′ ⟩
-~-sym (proj₁ M~M′) = proj₁ ~-sym M~M′
-~-sym (proj₂ M~M′) = proj₂ ~-sym M~M′
+~-sym (` x)                = ` x
+~-sym (ƛ M~M′)             = ƛ ~-sym M~M′
+~-sym (M~M′ · N~N′)        = ~-sym M~M′ · ~-sym N~N′
+~-sym ⟨⟩                   = ⟨⟩
+~-sym ⟨ M~M′ , N~N′ ⟩      = ⟨ ~-sym M~M′ , ~-sym N~N′ ⟩
+~-sym (proj₁ M~M′)         = proj₁ ~-sym M~M′
+~-sym (proj₂ M~M′)         = proj₂ ~-sym M~M′
 ~-sym (mlet M~M′ `in N~N′) = mlet ~-sym M~M′ `in ~-sym N~N′
-~-sym mfix! = mfix!
+~-sym mfix!                = mfix!
 
 ~-rename
   : (ρ₁ : Rename Γ Γ′)
