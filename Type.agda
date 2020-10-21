@@ -11,7 +11,7 @@ open import Relation.Nullary
 data Type : Set where
 --  ⊥̇    : Type
   ⊤̇    : Type
---  ℕ̇    : Type
+  ℕ̇    : Type
   _×̇_  : Type → Type → Type
   _→̇_  : Type → Type → Type
   □_   : Type → Type
@@ -49,6 +49,16 @@ _≟Tp_ : (A B : Type) → Dec (A ≡ B)
 (□ _)     ≟Tp ⊤̇           = no λ () 
 (□ _)     ≟Tp (_ ×̇ _)     = no λ () 
 (□ _)     ≟Tp (_ →̇ _)     = no λ () 
+
+⊤̇ ≟Tp ℕ̇ = no λ ()
+ℕ̇ ≟Tp ⊤̇ = no λ ()
+ℕ̇ ≟Tp ℕ̇ = yes refl
+ℕ̇ ≟Tp (B ×̇ B₁) = no λ ()
+ℕ̇ ≟Tp (B →̇ B₁) = no λ ()
+ℕ̇ ≟Tp (□ B) = no λ ()
+(A ×̇ A₁) ≟Tp ℕ̇ = no λ ()
+(A →̇ A₁) ≟Tp ℕ̇ = no λ ()
+(□ A) ≟Tp ℕ̇ = no λ ()
 
 dom≡ : A →̇ B ≡ A′ →̇ B′ → A ≡ A′
 dom≡ refl = refl

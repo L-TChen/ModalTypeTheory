@@ -25,7 +25,7 @@ data _︔_⊢_ : Cxt → Cxt → Type → Set
 private
   variable
     Γ Δ Γ′ Δ′      : Cxt
-    A B            : Type
+    A B C          : Type
     M N L M′ N′ L′ : Δ ︔ Γ ⊢ A
 
 ------------------------------------------------------------------------------
@@ -56,6 +56,16 @@ data _︔_⊢_ where
 
   proj₂_ : Δ ︔ Γ ⊢ A ×̇ B
          → Δ ︔ Γ ⊢ B
+
+  zero : Δ ︔ Γ ⊢ ℕ̇
+
+  suc : Δ ︔ Γ ⊢ ℕ̇
+      → Δ ︔ Γ ⊢ ℕ̇
+
+  rec : Δ ︔ Γ ⊢ A
+      → Δ ︔ Γ , ℕ̇ , A ⊢ A
+      → Δ ︔ Γ ⊢ ℕ̇ 
+      → Δ ︔ Γ ⊢ A
 
   mlet_`in_
       : Δ     ︔ Γ ⊢ □ A
@@ -91,6 +101,9 @@ rename ρ₁ ρ₂ ⟨⟩         = ⟨⟩
 rename ρ₁ ρ₂ ⟨ M , N ⟩  =  ⟨ rename ρ₁ ρ₂ M , rename ρ₁ ρ₂ N ⟩
 rename ρ₁ ρ₂ (proj₁ L)  = proj₁ rename ρ₁ ρ₂ L
 rename ρ₁ ρ₂ (proj₂ L)  = proj₂ rename ρ₁ ρ₂ L
+rename ρ₁ ρ₂ zero = zero
+rename ρ₁ ρ₂ (suc M) = suc (rename ρ₁ ρ₂ M)
+rename ρ₁ ρ₂ (rec M N L) = rec (rename ρ₁ ρ₂ M) (rename (ext (ext ρ₁)) ρ₂ N) (rename ρ₁ ρ₂ L) 
 rename ρ₁ ρ₂ (mlet N `in M) =
   mlet rename ρ₁ ρ₂ N `in rename ρ₁ (ext ρ₂) M
 rename ρ₁ ρ₂ (mfix M)   = mfix rename (ext ρ₂) ρ₂ M 
@@ -149,6 +162,9 @@ _⟪_⟫ : Δ ︔ Γ ⊢ A
 ⟨ M , N ⟩ ⟪ σ ⟫ = ⟨ M ⟪ σ ⟫ , N ⟪ σ ⟫ ⟩ 
 (proj₁ L) ⟪ σ ⟫ = proj₁ L ⟪ σ ⟫ 
 (proj₂ L) ⟪ σ ⟫ = proj₂ L ⟪ σ ⟫
+zero ⟪ σ ⟫ = zero
+suc M ⟪ σ ⟫ = suc (M ⟪ σ ⟫)
+rec M N L ⟪ σ ⟫ = rec (M ⟪ σ ⟫) (N ⟪ exts (exts σ) ⟫) (L ⟪ σ ⟫)
 (mlet N `in M) ⟪ σ ⟫ =
   mlet N ⟪ σ ⟫ `in M ⟪ mwk₁ ∘ σ ⟫
 (mfix M)  ⟪ σ ⟫ = mfix M 
@@ -164,6 +180,20 @@ _[_] : Δ ︔ (Γ , B) ⊢ A
      → Δ ︔ Γ ⊢ A
 M [ N ] = M ⟪ subst-zero N ⟫
 
+subst-one-zero
+  : Δ ︔ Γ ⊢ B
+  → Δ ︔ Γ ⊢ C
+  → Subst Δ (Γ , B , C) Γ
+subst-one-zero M N Z       = N
+subst-one-zero M N (S Z)   = M
+subst-one-zero M N (S S x) = ` x
+
+_[_,_]₂ : Δ ︔ (Γ , B , C) ⊢ A
+        → Δ ︔ Γ ⊢ B
+        → Δ ︔ Γ ⊢ C
+        → Δ ︔ Γ ⊢ A
+L [ M , N ]₂ = L ⟪ subst-one-zero M N ⟫
+
 _m⟪_⟫ 
   : Δ ︔ Γ ⊢ A
   → MSubst Δ Δ′
@@ -175,6 +205,9 @@ _m⟪_⟫
 ⟨ M , N ⟩ m⟪ σ ⟫ = ⟨ M m⟪ σ ⟫ , N m⟪ σ ⟫ ⟩ 
 (proj₁ L) m⟪ σ ⟫ = proj₁ L m⟪ σ ⟫
 (proj₂ L) m⟪ σ ⟫ = proj₂ L m⟪ σ ⟫
+zero m⟪ σ ⟫ = zero
+suc M m⟪ σ ⟫ = suc (M m⟪ σ ⟫)
+rec L M N m⟪ σ ⟫ = rec (L m⟪ σ ⟫) (M m⟪ σ ⟫) (N m⟪ σ ⟫)
 (mlet N `in M)  m⟪ σ ⟫ =
   mlet N m⟪ σ ⟫ `in M m⟪ mexts σ ⟫
 _m⟪_⟫ {Δ} {Δ′ = Δ′} (mfix M) σ = mfix M m⟪ wk₁ ∘ mσ ⟫ ⟪ exts mσ ⟫
@@ -224,6 +257,13 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
 
   β-⟨,⟩proj₂
     : _ ︔ _ ⊢ proj₂ ⟨ M , N ⟩ -→ N
+
+  β-rec-zero
+    : _ ︔ _ ⊢ rec M N zero -→ M
+
+  β-rec-suc
+    : _ ︔ _ ⊢ rec M N (suc L) -→ N [ L , rec M N L ]₂
+
   ξ-ƛ
     : _ ︔ _ ⊢ M -→ M′
     → _ ︔ _ ⊢ ƛ M -→ ƛ M′    
@@ -249,6 +289,22 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
     : _ ︔ _ ⊢ M -→ N
     → _ ︔ _ ⊢ proj₂ M -→ proj₂ N
 
+  ξ-suc
+    : _ ︔ _ ⊢ M -→ N
+    → _ ︔ _ ⊢ suc M -→ suc N
+
+  ξ-rec₁
+    : _ ︔ _ ⊢ M -→ M′
+    → _ ︔ _ ⊢ rec M N L -→ rec M′ N L
+
+  ξ-rec₂
+    : _ ︔ _ ⊢ N -→ N′
+    → _ ︔ _ ⊢ rec M N L -→ rec M N′ L
+
+  ξ-rec₃
+    : _ ︔ _ ⊢ L -→ L′
+    → _ ︔ _ ⊢ rec M N L -→ rec M N L′
+
   ξ-mlet₁
     : _ ︔ _ ⊢ N -→ N′
     → _ ︔ _ ⊢ mlet N `in M -→ mlet N′ `in M
@@ -262,6 +318,8 @@ data _︔_⊢_-→_ (Δ Γ : Cxt) : (M N : Δ ︔ Γ ⊢ A) → Set where
 
   δ-proj₂-mlet
     : Δ ︔ Γ ⊢ proj₂ (mlet N `in M) -→ mlet N `in (proj₂ M)
+
+  -- TODO: δ-rules for rec?
 
   δ-·-mlet
     : Δ ︔ Γ ⊢ (mlet N `in L) · M -→ mlet N `in (L · mwk ∅ M)
@@ -320,6 +378,13 @@ data Value : (M : ∅ ︔ ∅ ⊢ A) → Set where
     → (N : ∅ ︔ ∅ ⊢ B)
     → Value ⟨ M , N ⟩
 
+  zero
+    : Value zero
+
+  suc
+    : (M : ∅ ︔ ∅ ⊢ ℕ̇)
+    → Value (suc M)
+
 data Progress (M : ∅ ︔ ∅ ⊢ A) : Set where
   step
     : ∅ ︔ ∅ ⊢ M -→ N
@@ -344,6 +409,12 @@ progress (proj₁ MN) with progress MN
 progress (proj₂ MN) with progress MN
 ... | step M-→N      = step (ξ-proj₂ M-→N)
 ... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
+progress zero = done zero
+progress (suc M) = done (suc M)
+progress (rec M N L) with progress L 
+... | step L-→L′     = step (ξ-rec₃ L-→L′)
+... | done zero      = step β-rec-zero
+... | done (suc L′) = step β-rec-suc
 progress (mlet N `in M)  with progress N
 ... | step N→N′      = step (ξ-mlet₁ N→N′)
 ... | done (mfix N′) = step β-mfix
