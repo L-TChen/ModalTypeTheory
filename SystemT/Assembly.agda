@@ -171,3 +171,13 @@ module _ {gNum : GNum} where
 
   ☒X→̇☒☒X : ∀ X a → Trackable (☒ X by a) (☒ (☒ X by a) by ⟨⟩)
   ☒X→̇☒☒X X _ = ƛ # 0 , (_, tt) , λ _ → tt
+
+  ☒-intro : ∀ X → (x : X .Carrier) → ∃[ a ] ((☒ X by a) .Carrier)
+  ☒-intro X x with a , a⊩x ←  X .realiserOf x = a , x , a⊩x
+
+  ☒-internalize
+    : ∀ X Y
+    → (f : ∅ ⊢ X .type → ∅ ⊢ Y .type)
+    → (∀ a → ∃[ x ] (X ._⊩_ a x) → ∃[ y ] (Y ._⊩_ (f a) y))
+    → (∀ a → Trackable (☒ X by a) (☒ Y by f a))
+  ☒-internalize X Y f g a = (ƛ # 0) , g a , λ x → tt
