@@ -101,6 +101,15 @@ rename ρ₁ ρ₂ ⌜ M ⌝      = ⌜ rename ρ₂ id M ⌝
 rename ρ₁ ρ₂ (mlet N `in M) =
   mlet rename ρ₁ ρ₂ N `in rename ρ₁ (ext ρ₂) M
 
+wk₁ : Δ ︔ Γ ⊢ A
+  → Δ ︔ Γ , B ⊢ A
+wk₁ = rename S_ id
+
+exch : {C : Type}
+  → Δ ︔ Γ , B , C ⊢ A
+  → Δ ︔ Γ , C , B ⊢ A
+exch = rename (λ { Z → S Z ; (S Z) → Z ; (S (S x)) → S (S x) }) id
+
 mwk₁
   : Δ ︔ Γ ⊢ A
   → Δ , B ︔ Γ ⊢ A
@@ -263,56 +272,6 @@ _-↠⟨_⟩_
 M -↠⟨ M ∎ ⟩ M-↠N                = M-↠N
 L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -↠⟨ M-↠N ⟩ N-↠N′)
 
-data Value : (M : ∅ ︔ ∅ ⊢ A) → Set where
-  ƛ_
-    : (N : ∅ ︔ ∅ , A ⊢ B)
-      -------------------
-    → Value (ƛ N)
-
-  ⌜_⌝
-    : (M : ∅ ︔ ∅ ⊢ A)
-    → Value ⌜ M ⌝
-
-  ⟨⟩
-    : Value ⟨⟩
-
-  ⟨_,_⟩
-    : (M : ∅ ︔ ∅ ⊢ A)
-    → (N : ∅ ︔ ∅ ⊢ B)
-    → Value ⟨ M , N ⟩
-
-------------------------------------------------------------------------------
--- Progress theorem i.e. one-step evaluator
-
-data Progress (M : ∅ ︔ ∅ ⊢ A) : Set where
-  step
-    : ∅ ︔ ∅ ⊢ M -→ N
-      --------------
-    → Progress M
-
-  done
-    : Value M
-    → Progress M
-
-progress : (M : ∅ ︔ ∅ ⊢ A) → Progress M
-progress (ƛ M)       = done (ƛ M)
-progress (M · N)    with progress M | progress N
-... | step M→M′   | _         = step (ξ-·₁ M→M′)
-... | _           | step N→N′ = step (ξ-·₂ N→N′)
-... | done (ƛ M′) | done vN   = step β-ƛ·
-progress ⟨⟩          = done ⟨⟩
-progress ⟨ M , N ⟩   = done ⟨ M , N ⟩
-progress (proj₁ MN) with progress MN
-... | step M-→N      = step (ξ-proj₁ M-→N)
-... | done ⟨ _ , _ ⟩ = step β-⟨,⟩proj₁
-progress (proj₂ MN) with progress MN
-... | step M-→N      = step (ξ-proj₂ M-→N)
-... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
-progress ⌜ M ⌝       = done ⌜ M ⌝
-progress (mlet N `in M) with progress N
-... | step N-→N′ = step (ξ-mlet₁ N-→N′)
-... | done ⌜ L ⌝ = step β-⌜⌝mlet
-
 ------------------------------------------------------------------------------
 -- -↠ is a congruence
 ƛ-↠
@@ -368,3 +327,74 @@ mlet-↠₂
   → Δ ︔ Γ     ⊢ mlet N `in M -↠ mlet N `in M′
 mlet-↠₂ (M ∎)                = mlet _ `in M ∎
 mlet-↠₂ (M -→⟨ M-→M′ ⟩ M-↠N) = mlet _ `in M -→⟨ ξ-mlet₂ M-→M′ ⟩ mlet-↠₂ M-↠N
+
+------------------------------------------------------------------------------
+-- Values
+
+data Value : (M : ∅ ︔ ∅ ⊢ A) → Set where
+  ƛ_
+    : (N : ∅ ︔ ∅ , A ⊢ B)
+      -------------------
+    → Value (ƛ N)
+
+  ⌜_⌝
+    : (M : ∅ ︔ ∅ ⊢ A)
+    → Value ⌜ M ⌝
+
+  ⟨⟩
+    : Value ⟨⟩
+
+  ⟨_,_⟩
+    : (M : ∅ ︔ ∅ ⊢ A)
+    → (N : ∅ ︔ ∅ ⊢ B)
+    → Value ⟨ M , N ⟩
+
+------------------------------------------------------------------------------
+-- Progress theorem i.e. one-step evaluator
+
+data Progress (M : ∅ ︔ ∅ ⊢ A) : Set where
+  step
+    : ∅ ︔ ∅ ⊢ M -→ N
+      --------------
+    → Progress M
+
+  done
+    : Value M
+    → Progress M
+
+progress : (M : ∅ ︔ ∅ ⊢ A) → Progress M
+progress (ƛ M)       = done (ƛ M)
+progress (M · N)    with progress M | progress N
+... | step M→M′   | _         = step (ξ-·₁ M→M′)
+... | _           | step N→N′ = step (ξ-·₂ N→N′)
+... | done (ƛ M′) | done vN   = step β-ƛ·
+progress ⟨⟩          = done ⟨⟩
+progress ⟨ M , N ⟩   = done ⟨ M , N ⟩
+progress (proj₁ MN) with progress MN
+... | step M-→N      = step (ξ-proj₁ M-→N)
+... | done ⟨ _ , _ ⟩ = step β-⟨,⟩proj₁
+progress (proj₂ MN) with progress MN
+... | step M-→N      = step (ξ-proj₂ M-→N)
+... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
+progress ⌜ M ⌝       = done ⌜ M ⌝
+progress (mlet N `in M) with progress N
+... | step N-→N′ = step (ξ-mlet₁ N-→N′)
+... | done ⌜ L ⌝ = step β-⌜⌝mlet
+
+ΔtoΓ : Δ , A ︔ Γ ⊢ B
+  → Δ ︔ Γ , □ A ⊢ B 
+ΔtoΓ M = mlet # 0 `in wk₁ M
+
+{-# TERMINATING #-}
+ΓtoΔ : Δ ︔ Γ , □ A ⊢ B
+  → Δ , A ︔ Γ ⊢ B
+ΓtoΔ (` Z)      = ⌜ # 0 ⌝
+ΓtoΔ (` (S x))  = ` x
+ΓtoΔ (ƛ M)      = ƛ ΓtoΔ (exch M)
+ΓtoΔ (M · N)    = ΓtoΔ M · ΓtoΔ N
+ΓtoΔ ⟨⟩         = ⟨⟩
+ΓtoΔ ⟨ M , M₁ ⟩ = ⟨ ΓtoΔ M , ΓtoΔ M₁ ⟩
+ΓtoΔ (proj₁ M)  = proj₁ ΓtoΔ M
+ΓtoΔ (proj₂ M)  = proj₂ ΓtoΔ M
+ΓtoΔ ⌜ M ⌝      = ⌜ wk₁ M ⌝
+ΓtoΔ (mlet N `in M) = mlet ΓtoΔ N `in rename id (λ { Z → S Z ; (S Z) → Z ; (S (S x)) → S (S x) }) (ΓtoΔ M) 
