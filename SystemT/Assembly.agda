@@ -167,12 +167,12 @@ module _ {gNum : GNum} where
   ¬☒X→̇□¬☒X X a = ƛ zero , id , λ r {_} {(x , a⊩x)} _ → r {⟨⟩} {x , a⊩x} tt
 
   ☒□X→̇X : ∀ X n → Trackable (☒ (□ X) by n) X
-  ☒□X→̇X X n = ƛ ↑ ⌞ n ⌟ , proj₁ , λ { {a} {x , ⌞n⌟⊩x} tt → {! ⌞n⌟⊩x !} }
+  ☒□X→̇X X n = ƛ ↑ ⌞ n ⌟ , (λ (x , x⊩a) → x) , λ { {a} {x , ⌞n⌟⊩x} tt → {! ⌞n⌟⊩x !} }
 
   ☒X→̇☒☒X : ∀ X a → Trackable (☒ X by a) (☒ (☒ X by a) by ⟨⟩)
   ☒X→̇☒☒X X _ = ƛ # 0 , (_, tt) , λ _ → tt
 
-  ☒-intro : ∀ X → (x : X .Carrier) → ∃[ a ] ((☒ X by a) .Carrier)
+  ☒-intro : ∀ X → X .Carrier → ∃[ a ] ((☒ X by a) .Carrier)
   ☒-intro X x with a , a⊩x ←  X .realiserOf x = a , x , a⊩x
 
   ☒-internalize
@@ -181,3 +181,7 @@ module _ {gNum : GNum} where
     → (∀ a → ∃[ x ] (X ._⊩_ a x) → ∃[ y ] (Y ._⊩_ (f a) y))
     → (∀ a → Trackable (☒ X by a) (☒ Y by f a))
   ☒-internalize X Y f g a = (ƛ # 0) , g a , λ x → tt
+
+  -- non-provable in GLA
+  IER : ∀ X a → Trackable (□ (☒ X by a)) X
+  IER X a = ƛ (↑ a) , (λ (x , x⊩a) → x) , λ {_} {(x , a⊩x)} _ → {! !} 
