@@ -108,7 +108,7 @@ wk₁ = rename S_ id
 exch : {C : Type}
   → Δ ︔ Γ , B , C ⊢ A
   → Δ ︔ Γ , C , B ⊢ A
-exch = rename (λ { Z → S Z ; (S Z) → Z ; (S (S x)) → S (S x) }) id
+exch = rename ∋-exch id
 
 mwk₁
   : Δ ︔ Γ ⊢ A
@@ -397,4 +397,5 @@ progress (mlet N `in M) with progress N
 ΓtoΔ (proj₁ M)  = proj₁ ΓtoΔ M
 ΓtoΔ (proj₂ M)  = proj₂ ΓtoΔ M
 ΓtoΔ ⌜ M ⌝      = ⌜ wk₁ M ⌝
-ΓtoΔ (mlet N `in M) = mlet ΓtoΔ N `in rename id (λ { Z → S Z ; (S Z) → Z ; (S (S x)) → S (S x) }) (ΓtoΔ M) 
+ΓtoΔ (mlet N `in M) =
+  mlet ΓtoΔ N `in rename id ∋-exch (ΓtoΔ M) 

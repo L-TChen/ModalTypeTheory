@@ -29,7 +29,7 @@ private
   variable
     Ty    : Set
     Γ Δ Θ : Context Ty
-    A B   : Ty
+    A B C : Ty
 
 Cxt  = Context Type
 Cxts = Context Cxt
@@ -96,6 +96,16 @@ data Prefix {Ty : Set} : Context Ty → Context Ty → Set where
 prefix-trans : Prefix Γ Δ → Prefix Δ Θ → Prefix Γ Θ
 prefix-trans m Z = m
 prefix-trans m (S n) = S prefix-trans m n
+
+------------------------------------------------------------------------------
+-- Properties of ∋
+
+∋-exch
+  : (Γ , B) , C ∋ A
+  → (Γ , C) , B ∋ A
+∋-exch Z         = S Z
+∋-exch (S Z)     = Z
+∋-exch (S (S x)) = S (S x)
 
 ------------------------------------------------------------------------------
 -- Properties of ⧺
