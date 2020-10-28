@@ -22,8 +22,6 @@ record GNum : Set where
     ⌞_⌟ : {A : Type} → ∅ ⊢ ℕ̇ → ∅ ⊢ A
     ⌞⌜⌝⌟-id : (∅ ⊢ n -↠ ⌜ a ⌝) → ⌞ n ⌟ ≡ a
 
-    ⌞⌟-↠ : {A : Type} → (∅ ⊢ m -↠ n) → ∅ ⊢ ⌞_⌟ {A = A} m -↠ ⌞ n ⌟
-
     -- ⊢ □ (A → B) →̇ □ A →̇ □ B
     app : ∅ ⊢ ℕ̇ →̇ ℕ̇ →̇ ℕ̇
     app-⌜⌝-⌜⌝ : ∅ ⊢ app · ⌜ a ⌝ · ⌜ b ⌝ -↠ ⌜ a · b ⌝
@@ -80,73 +78,69 @@ module _ {gNum : GNum} where
   igfix : (A : Type) → ∅ ⊢ ℕ̇ →̇ ℕ̇
   igfix A = ƛ ↑ diag · (↑ app · ↑ ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝ · # 0)
 
-  igfix-⌜⌝ : {a : ∅ ⊢ ℕ̇ →̇ A} → ∅ ⊢ ⌞ igfix A · ⌜ a ⌝ ⌟ -↠ a · (igfix A · ⌜ a ⌝)
-  igfix-⌜⌝ {A = A} {a = a} =
-    begin
-      ⌞ igfix A · ⌜ a ⌝ ⌟
-    -↠⟨ ⌞⌟-↠ igfix⌜a⌝-↠⌜g⌜g⌝⌝ ⟩
-      ⌞ ⌜ g · ⌜ g ⌝ ⌝ ⌟
-    ≡⟨ ⌞⌜⌝⌟-id (_ ∎) ⟩
-      g · ⌜ g ⌝
-    -↠⟨ g⌜g⌝-↠a⌜g⌜g⌝⌝ ⟩
-      a · ⌜ g · ⌜ g ⌝ ⌝
-    -↠⟨ {!!} ⟩               -- FIXME Only have ↞- ...
-      a · (igfix A · ⌜ a ⌝)
-    ∎
-    where
-      open -↠-Reasoning
-      g : ∅ ⊢ ℕ̇ →̇ A
-      g = (ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0))) · a
+  igfix-⌜⌝ : {a : ∅ ⊢ ℕ̇ →̇ A} → ∃[ b ] ((∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ b ⌝) × (∅ ⊢ b -↠ a · ⌜ b ⌝))
+  igfix-⌜⌝ {A = A} {a = a} = g · ⌜ g ⌝ , igfix⌜a⌝-↠⌜g⌜g⌝⌝ , g⌜g⌝-↠a⌜g⌜g⌝⌝ where
+    open -↠-Reasoning
 
-      cong₃ : ∀ f {x y u v s t} → x ≡ y → u ≡ v → s ≡ t → f x u s ≡ f y v t
-      cong₃ f P.refl P.refl P.refl = P.refl
+    g : ∅ ⊢ ℕ̇ →̇ A
+    g = (ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0))) · a
 
-      igfix⌜a⌝-↠⌜g⌜g⌝⌝ : ∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ g · ⌜ g ⌝ ⌝
-      igfix⌜a⌝-↠⌜g⌜g⌝⌝ =
-        begin
-          igfix A · ⌜ a ⌝
-        -→⟨ β-ƛ· ⟩
-          (↑ diag) ⟪ _ ⟫ · (↑ app ⟪ _ ⟫ · ↑ ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝  ⟪ _ ⟫ · ⌜ a ⌝)
-        ≡⟨ cong₃ (λ L M N → L · (M · N · ⌜ a ⌝)) (subst-↑ _ diag) (subst-↑ _ app) (subst-↑ _ _) ⟩
-          diag · (app · ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝ · ⌜ a ⌝)
-        -↠⟨ ·₂-↠ app-⌜⌝-⌜⌝ ⟩
-          diag · ⌜ g ⌝
-        -↠⟨ diag-⌜⌝ ⟩
-          ⌜ g · ⌜ g ⌝ ⌝
-        ∎
+    cong₃ : ∀ f {x y u v s t} → x ≡ y → u ≡ v → s ≡ t → f x u s ≡ f y v t
+    cong₃ f P.refl P.refl P.refl = P.refl
 
-      g⌜g⌝-↠a⌜g⌜g⌝⌝ :  ∅ ⊢ g · ⌜ g ⌝ -↠ a · ⌜ g · ⌜ g ⌝ ⌝
-      g⌜g⌝-↠a⌜g⌜g⌝⌝ =
-        begin
-          g · ⌜ g ⌝
-        -→⟨ ξ-·₁ β-ƛ· ⟩
-          ƛ_ {B = A} (rename S_ a · (↑ diag ⟪ _ ⟫ · # 0)) · ⌜ g ⌝
-        -→⟨ β-ƛ· ⟩
-          rename S_ a ⟪ _ ⟫ · (↑ diag ⟪ _ ⟫ ⟪ _ ⟫ · ⌜ g ⌝)
-        ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ g ⌝)) (subst-rename-∅ S_ _ a) (subst-subst _ _ (↑ diag)) ⟩
-          a · (↑ diag ⟪ _ ⟫ · ⌜ g ⌝)
-        ≡⟨ P.cong (λ M → a · (M · ⌜ g ⌝)) (subst-↑ _ diag) ⟩
-          a · (diag · ⌜ g ⌝)
-        -↠⟨ ·₂-↠ diag-⌜⌝ ⟩
-          a · ⌜ g · ⌜ g ⌝ ⌝
-        ∎
+    igfix⌜a⌝-↠⌜g⌜g⌝⌝ : ∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ g · ⌜ g ⌝ ⌝
+    igfix⌜a⌝-↠⌜g⌜g⌝⌝ =
+      begin
+        igfix A · ⌜ a ⌝
+      -→⟨ β-ƛ· ⟩
+        (↑ diag) ⟪ _ ⟫ · (↑ app ⟪ _ ⟫ · ↑ ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝  ⟪ _ ⟫ · ⌜ a ⌝)
+      ≡⟨ cong₃ (λ L M N → L · (M · N · ⌜ a ⌝)) (subst-↑ _ diag) (subst-↑ _ app) (subst-↑ _ _) ⟩
+        diag · (app · ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝ · ⌜ a ⌝)
+      -↠⟨ ·₂-↠ app-⌜⌝-⌜⌝ ⟩
+        diag · ⌜ g ⌝
+      -↠⟨ diag-⌜⌝ ⟩
+        ⌜ g · ⌜ g ⌝ ⌝
+      ∎
+
+    g⌜g⌝-↠a⌜g⌜g⌝⌝ :  ∅ ⊢ g · ⌜ g ⌝ -↠ a · ⌜ g · ⌜ g ⌝ ⌝
+    g⌜g⌝-↠a⌜g⌜g⌝⌝ =
+      begin
+        g · ⌜ g ⌝
+      -→⟨ ξ-·₁ β-ƛ· ⟩
+        ƛ_ {B = A} (rename S_ a · (↑ diag ⟪ _ ⟫ · # 0)) · ⌜ g ⌝
+      -→⟨ β-ƛ· ⟩
+        rename S_ a ⟪ _ ⟫ · (↑ diag ⟪ _ ⟫ ⟪ _ ⟫ · ⌜ g ⌝)
+      ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ g ⌝)) (subst-rename-∅ S_ _ a) (subst-subst _ _ (↑ diag)) ⟩
+        a · (↑ diag ⟪ _ ⟫ · ⌜ g ⌝)
+      ≡⟨ P.cong (λ M → a · (M · ⌜ g ⌝)) (subst-↑ _ diag) ⟩
+        a · (diag · ⌜ g ⌝)
+      -↠⟨ ·₂-↠ diag-⌜⌝ ⟩
+        a · ⌜ g · ⌜ g ⌝ ⌝
+      ∎
 
   -- ⊢ □ A →̇ A   ⇒   ⊢ A →̇ A   ⇒   ⊢ A
   selfEval⇒fixpoint
-    : Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ n → ∅ ⊢ e · n -↠ ⌞ n ⌟)
+    : Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ {n} → ∅ ⊢ e · n -↠ ⌞ n ⌟)
     → (f : ∅ ⊢ A →̇ A)
     → Σ[ a ∈ ∅ ⊢ A ] (∅ ⊢ a -↠ f · a)
-  selfEval⇒fixpoint (e , e-↠eval) f = (gfix (ƛ ↑ f · (↑ e · # 0))) , {! !}
-  --   gfix (λ x → f · (e · x))
-  -- -↠⟨ gfix-spec ⟩
-  --   f · (e · ⌜ gfix (λ x → f · (e · x)) ⌝)
-  -- -↠⟨ ·-cong₂ e-↠eval ⟩
-  --   f · ⌞ ⌜ gfix (λ x → f · (e · x)) ⌝ ⌟
-  -- -↠⟨ ·-cong₂ eval A ⟩
-  --   f · gfix (λ x → suc (e · x))
+  selfEval⇒fixpoint (e , e-↠⌞⌟) f = gfix (ƛ ↑ f · (↑ e · # 0)) ,
+    (begin
+      gfix (ƛ ↑ f · (↑ e · # 0))
+    -↠⟨ gfix-spec ⟩
+      (ƛ ↑ f · (↑ e · # 0)) · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝
+    -→⟨ β-ƛ· ⟩
+      ↑ f ⟪ _ ⟫ · (↑ e ⟪ _ ⟫ · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝)
+    ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝)) (subst-↑ _ f) (subst-↑ _ e) ⟩
+      f · (e · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝)
+    -↠⟨ ·₂-↠ e-↠⌞⌟ ⟩
+      f · (⌞ ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝ ⌟)
+    ≡⟨ P.cong (f ·_) (⌞⌜⌝⌟-id (_ ∎)) ⟩
+      f · gfix (ƛ (↑ f) · ((↑ e) · # 0))
+    ∎)
+    where open -↠-Reasoning
 
   -- ¬ ∀ A. □ A → A
-  ¬∃selfEval : (∀ A → Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ n → ∅ ⊢ e · n -↠ ⌞ n ⌟)) → ⊥
+  ¬∃selfEval : (∀ A → Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ {n} → ∅ ⊢ e · n -↠ ⌞ n ⌟)) → ⊥
   ¬∃selfEval e with selfEval⇒fixpoint (e ℕ̇) (ƛ suc (# 0))
   ... | a , a-↠suca = {! !}
 
