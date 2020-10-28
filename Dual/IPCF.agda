@@ -208,7 +208,7 @@ _ : ∅ ︔ ∅ ⊢  □ A ×̇ □ B →̇ □ (A ×̇ B)
 _ = ƛ mlet proj₁ # 0 `in mlet proj₂ # 0 `in ⌜ ⟨ m# 1 , m# 0 ⟩ ⌝
 
 GL : ∅ ︔ ∅ ⊢ □ (□ A →̇ A) →̇ □ A
-GL = ƛ mlet # 0 `in ⌜ mfix m# 0 · # 0 ⌝ 
+GL = ƛ mlet # 0 `in ⌜ mfix m# 0 · # 0 ⌝
 
 eval : ∅ ︔ ∅ ⊢ □ A →̇ A
 eval = ƛ mlet # 0 `in m# 0
@@ -217,10 +217,10 @@ gnum : ∅ ︔ ∅ ⊢ □ A →̇ □ □ A
 gnum = ƛ mlet # 0 `in ⌜ ⌜ m# 0 ⌝ ⌝
 
 Ω : ∅ ︔ ∅ ⊢ A
-Ω = mfix ↑ eval · # 0 
+Ω = mfix mlet # 0 `in m# 0
 
 Y : ∅ ︔ ∅ ⊢ (A →̇ A) →̇ A
-Y = mfix ƛ # 0 · (↑ eval · # 1 · # 0)
+Y = mfix mlet # 0 `in m# 0
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
