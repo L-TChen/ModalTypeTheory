@@ -55,68 +55,53 @@ module _ {gNum : GNum} where
   -- ⊢ □ A →̇ A   ⇒   ⊢ A
   gfix : ∅ ⊢ ℕ̇ →̇ A → ∅ ⊢ A
   gfix {A} a = g · ⌜ g ⌝ where
+    -- the β-redex is for (∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ gfix a ⌝) to be true
     g : ∅ ⊢ ℕ̇ →̇ A
-    g = ƛ ↑ a · (↑ diag · ` Z)
+    g = (ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0))) · a
 
   gfix-spec : ∅ ⊢ gfix a -↠ a · ⌜ gfix a ⌝
-  gfix-spec {a = a} =
+  gfix-spec {A = A} {a = a} =
     begin
-      gfix a
+      g · ⌜ g ⌝
+    -→⟨ ξ-·₁ β-ƛ· ⟩
+      ƛ_ {B = A} (rename S_ a · (↑ diag ⟪ _ ⟫ · # 0)) · ⌜ g ⌝
     -→⟨ β-ƛ· ⟩
-      ↑ a ⟪ subst-zero ⌜ g ⌝ ⟫ · (↑ diag ⟪ subst-zero ⌜ g ⌝ ⟫ · ⌜ g ⌝)
-    ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ g ⌝)) (subst-↑ _ a) (subst-↑ _ diag) ⟩
+      rename S_ a ⟪ _ ⟫ · (↑ diag ⟪ _ ⟫ ⟪ _ ⟫ · ⌜ g ⌝)
+    ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ g ⌝)) (subst-rename-∅ S_ _ a) (subst-subst _ _ (↑ diag)) ⟩
+      a · (↑ diag ⟪ _ ⟫ · ⌜ g ⌝)
+    ≡⟨ P.cong (λ M → a · (M · ⌜ g ⌝)) (subst-↑ _ diag) ⟩
       a · (diag · ⌜ g ⌝)
     -↠⟨ ·₂-↠ diag-⌜⌝ ⟩
-      a · ⌜ gfix a ⌝
+      a · ⌜ g · ⌜ g ⌝ ⌝
     ∎
     where
       open -↠-Reasoning
-      g : ∅ ⊢ ℕ̇ →̇ _
-      g = ƛ ↑ a · (↑ diag · ` Z)
+      g : ∅ ⊢ ℕ̇ →̇ A
+      g = (ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0))) · a
 
   -- ⊢ □ (□ A →̇ A) →̇ □ A
   igfix : (A : Type) → ∅ ⊢ ℕ̇ →̇ ℕ̇
   igfix A = ƛ ↑ diag · (↑ app · ↑ ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝ · # 0)
 
-  igfix-⌜⌝ : {a : ∅ ⊢ ℕ̇ →̇ A} → ∃[ b ] ((∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ b ⌝) × (∅ ⊢ b -↠ a · ⌜ b ⌝))
-  igfix-⌜⌝ {A = A} {a = a} = g · ⌜ g ⌝ , igfix⌜a⌝-↠⌜g⌜g⌝⌝ , g⌜g⌝-↠a⌜g⌜g⌝⌝ where
-    open -↠-Reasoning
-
-    g : ∅ ⊢ ℕ̇ →̇ A
-    g = (ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0))) · a
-
-    cong₃ : ∀ f {x y u v s t} → x ≡ y → u ≡ v → s ≡ t → f x u s ≡ f y v t
-    cong₃ f P.refl P.refl P.refl = P.refl
-
-    igfix⌜a⌝-↠⌜g⌜g⌝⌝ : ∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ g · ⌜ g ⌝ ⌝
-    igfix⌜a⌝-↠⌜g⌜g⌝⌝ =
-      begin
-        igfix A · ⌜ a ⌝
-      -→⟨ β-ƛ· ⟩
-        (↑ diag) ⟪ _ ⟫ · (↑ app ⟪ _ ⟫ · ↑ ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝  ⟪ _ ⟫ · ⌜ a ⌝)
-      ≡⟨ cong₃ (λ L M N → L · (M · N · ⌜ a ⌝)) (subst-↑ _ diag) (subst-↑ _ app) (subst-↑ _ _) ⟩
-        diag · (app · ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝ · ⌜ a ⌝)
-      -↠⟨ ·₂-↠ app-⌜⌝-⌜⌝ ⟩
-        diag · ⌜ g ⌝
-      -↠⟨ diag-⌜⌝ ⟩
-        ⌜ g · ⌜ g ⌝ ⌝
-      ∎
-
-    g⌜g⌝-↠a⌜g⌜g⌝⌝ :  ∅ ⊢ g · ⌜ g ⌝ -↠ a · ⌜ g · ⌜ g ⌝ ⌝
-    g⌜g⌝-↠a⌜g⌜g⌝⌝ =
-      begin
-        g · ⌜ g ⌝
-      -→⟨ ξ-·₁ β-ƛ· ⟩
-        ƛ_ {B = A} (rename S_ a · (↑ diag ⟪ _ ⟫ · # 0)) · ⌜ g ⌝
-      -→⟨ β-ƛ· ⟩
-        rename S_ a ⟪ _ ⟫ · (↑ diag ⟪ _ ⟫ ⟪ _ ⟫ · ⌜ g ⌝)
-      ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ g ⌝)) (subst-rename-∅ S_ _ a) (subst-subst _ _ (↑ diag)) ⟩
-        a · (↑ diag ⟪ _ ⟫ · ⌜ g ⌝)
-      ≡⟨ P.cong (λ M → a · (M · ⌜ g ⌝)) (subst-↑ _ diag) ⟩
-        a · (diag · ⌜ g ⌝)
-      -↠⟨ ·₂-↠ diag-⌜⌝ ⟩
-        a · ⌜ g · ⌜ g ⌝ ⌝
-      ∎
+  igfix-⌜⌝ : {a : ∅ ⊢ ℕ̇ →̇ A} → ∅ ⊢ igfix A · ⌜ a ⌝ -↠ ⌜ gfix a ⌝
+  igfix-⌜⌝ {A = A} {a = a} =
+    begin
+      igfix A · ⌜ a ⌝
+    -→⟨ β-ƛ· ⟩
+      (↑ diag) ⟪ _ ⟫ · (↑ app ⟪ _ ⟫ · ↑ ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝  ⟪ _ ⟫ · ⌜ a ⌝)
+    ≡⟨ cong₃ (λ L M N → L · (M · N · ⌜ a ⌝)) (subst-↑ _ diag) (subst-↑ _ app) (subst-↑ _ _) ⟩
+      diag · (app · ⌜ ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0)) ⌝ · ⌜ a ⌝)
+    -↠⟨ ·₂-↠ app-⌜⌝-⌜⌝ ⟩
+      diag · ⌜ g ⌝
+    -↠⟨ diag-⌜⌝ ⟩
+      ⌜ g · ⌜ g ⌝ ⌝
+    ∎
+    where
+      open -↠-Reasoning
+      g : ∅ ⊢ ℕ̇ →̇ A
+      g = (ƛ ƛ_ {B = A} (# 1 · (↑ diag · # 0))) · a
+      cong₃ : ∀ f {x y u v s t} → x ≡ y → u ≡ v → s ≡ t → f x u s ≡ f y v t
+      cong₃ f P.refl P.refl P.refl = P.refl
 
   -- ⊢ □ A →̇ A   ⇒   ⊢ A →̇ A   ⇒   ⊢ A
   selfEval⇒fixpoint
@@ -191,6 +176,9 @@ module _ {gNum : GNum} where
     lift : ∀ {x} → ∃[ a ] (X ._⊩_ a x) → ∃[ b ] (X ._⊩_ ⌞ b ⌟ x)
     lift (a , a⊩x) rewrite P.sym (⌞⌜⌝⌟-id (⌜ a ⌝ -↠-Reasoning.∎)) = ⌜ a ⌝ , a⊩x
 
+  GL : ∀ X → Trackable (□ ((□ X) ⇒ X)) (□ X)
+  GL X = igfix (X .type) , (λ (r , f , r⊩f)→ {!  !}) , {! !}
+
   ☒_by_ : (X : Assembly) → (a : ∅ ⊢ X .type) → Assembly
   ☒ X by a = record { Carrier = ∃[ x ] (X ._⊩_ a x)  ; type = ⊤̇ ; _⊩_ = λ _ _ → ⊤ ; realiserOf = λ _ → ⟨⟩ , tt }
 
@@ -218,6 +206,9 @@ module _ {gNum : GNum} where
     → (∀ a → ∃[ x ] (X ._⊩_ a x) → ∃[ y ] (Y ._⊩_ (f a) y))
     → (∀ a → Trackable (☒ X by a) (☒ Y by f a))
   ☒-internalize X Y f g a = (ƛ # 0) , g a , λ x → tt
+
+  ☒GL : ∀ X a → Trackable (☒ ((□ X) ⇒ X) by a) (☒ X by gfix a)
+  ☒GL X = ☒-internalize ((□ X) ⇒ X) X gfix λ r (f , r⊩f) → {! !} , {! !}
 
   -- non-provable in GLA
   IER : ∀ X a → Trackable (□ (☒ X by a)) X
