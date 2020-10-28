@@ -150,37 +150,53 @@ module _ {gNum : GNum} where
       type       : Type
       _⊩_        : ∅ ⊢ type → Carrier → Set
       realiserOf : (x : Carrier) → ∃[ a ] (a ⊩ x)
-
   open Assembly
 
   Tracks : (X Y : Assembly) (r : ∅ ⊢ X .type →̇ Y .type) (f : X .Carrier → Y .Carrier) → Set
-  Tracks X Y r f = {a : ∅ ⊢ X .type} {x : X .Carrier} → (X ._⊩_) a x → (Y ._⊩_) (r · a) (f x)
+  Tracks X Y r h = {a : ∅ ⊢ τ} {x : |X|} → a ⊩x x → (r · a) ⊩y (h x)
+    where
+      open Assembly X renaming (Carrier to |X|; type to τ; _⊩_ to _⊩x_; realiserOf to f)
+      open Assembly Y renaming (Carrier to |Y|; type to σ; _⊩_ to _⊩y_; realiserOf to g)
 
   Trackable : (X Y : Assembly) → Set
   Trackable X Y = ∃[ r ] ∃[ f ] (Tracks X Y r f)
 
   ⊥̇ : Assembly
-  ⊥̇ = record { Carrier = ⊥
-             ; type = ⊤̇
-             ; _⊩_ = λ a x → ⊥
-             ; realiserOf = λ () }
+  ⊥̇ = record
+    { Carrier = ⊥
+    ; type = ⊤̇
+    ; _⊩_ = λ a x → ⊥
+    ; realiserOf = λ ()
+    }
 
   _⇒_ : Assembly → Assembly → Assembly
-  X ⇒ Y = record { Carrier = Trackable X Y ; type = (X .type) →̇ (Y .type) ; _⊩_ = λ r (_ , f , _) → Tracks X Y r f ; realiserOf = λ (r , f , r⊩f) → r , r⊩f }
+  X ⇒ Y = record
+    { Carrier = Trackable X Y
+    ; type = (X .type) →̇ (Y .type)
+    ; _⊩_ = λ r (_ , f , _) → Tracks X Y r f
+    ; realiserOf = λ (r , f , r⊩f) → r , r⊩f
+    }
 
   □_ : Assembly → Assembly
-  □ X = record { Carrier = X .Carrier
+  □ X = record { Carrier = |X|
                ; type = ℕ̇
-               ; _⊩_ = λ a x → X ._⊩_ ⌞ a ⌟ x
-               ; realiserOf = lift ∘ X .realiserOf } where
-    lift : ∀ {x} → ∃[ a ] (X ._⊩_ a x) → ∃[ b ] (X ._⊩_ ⌞ b ⌟ x)
-    lift (a , a⊩x) rewrite P.sym (⌞⌜⌝⌟-id (⌜ a ⌝ -↠-Reasoning.∎)) = ⌜ a ⌝ , a⊩x
+               ; _⊩_ = λ a x → ⌞ a ⌟ ⊩ₓ x
+               ; realiserOf = lift ∘ f }
+    where
+      open Assembly X renaming (Carrier to |X|; _⊩_ to _⊩ₓ_; realiserOf to f)
+      lift : ∀ {x} → ∃[ a ] (a ⊩ₓ x) → ∃[ b ] (⌞ b ⌟ ⊩ₓ x)
+      lift (a , a⊩x) rewrite P.sym (⌞⌜⌝⌟-id (⌜ a ⌝ -↠-Reasoning.∎)) = ⌜ a ⌝ , a⊩x
 
   GL : ∀ X → Trackable (□ ((□ X) ⇒ X)) (□ X)
   GL X = igfix (X .type) , (λ (r , f , r⊩f)→ {!  !}) , {! !}
 
   ☒_by_ : (X : Assembly) → (a : ∅ ⊢ X .type) → Assembly
-  ☒ X by a = record { Carrier = ∃[ x ] (X ._⊩_ a x)  ; type = ⊤̇ ; _⊩_ = λ _ _ → ⊤ ; realiserOf = λ _ → ⟨⟩ , tt }
+  ☒ X by a = record
+    { Carrier    = ∃[ x ] (a ⊩ₓ x)
+    ; type       = ⊤̇ ; _⊩_ = λ _ _ → ⊤
+    ; realiserOf = λ _ → ⟨⟩ , tt }
+    where
+      open Assembly X renaming (Carrier to |X|; _⊩_ to _⊩ₓ_; realiserOf to f)
 
   ☒X→̇X : ∀ X a → Trackable (☒ X by a) X
   ☒X→̇X X a = ƛ (↑ a) , (λ (x , a⊩x) → x) , λ _ → {! a⊩x !}
