@@ -220,7 +220,7 @@ gnum = ƛ mlet # 0 `in ⌜ ⌜ m# 0 ⌝ ⌝
 Ω = mfix mlet # 0 `in m# 0
 
 Y : ∅ ︔ ∅ ⊢ (A →̇ A) →̇ A
-Y = mfix mlet # 0 `in m# 0
+Y = mfix ƛ # 0 · (mlet # 1 `in m# 0 · # 0)
 
 ------------------------------------------------------------------------------
 -- Single-step reduction
