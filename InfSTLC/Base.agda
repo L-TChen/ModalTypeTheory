@@ -1,57 +1,19 @@
 {-# OPTIONS --without-K --cubical #-}
 
--- Infinitary Simply Typed Lambda Calculus with products
+-- Simply Typed λ-Calculus with products
 
 module InfSTLC.Base where
-
-open import Agda.Primitive
-open import Agda.Primitive.Cubical renaming (itIsOne to 1=1)
-open import Agda.Builtin.Cubical.Path
---open import Agda.Builtin.Cubical.Sub renaming (Sub to _[_↦_]; primSubOut to outS)
-
-module Prims where
-   primitive
-     primLockUniv : Set₁
-
-open Prims renaming (primLockUniv to LockU) public
-
-postulate
-  Tick : LockU
-
-▹_ : Set → Set
-▹_ A = (@tick x : Tick) → A
-
-next : {A : Set}
-  → A → ▹ A
-next x _ = x
-
-infixl 4 _⊛_
-
-_⊛_ : {A : Set} {B : A → Set}
-  → ▹ ((a : A) → B a)
-  → (a : ▹ A) → (@tick x : Tick) → B (a x)
-(f ⊛ x) κ = f κ (x κ)
-
-pure  = next
-_<*>_ = _⊛_
-
-map▹ : {A B : Set}
-  → (f : A → B) → ▹ A → ▹ B
-map▹ f x α = f (x α)
-
-postulate
-   dfix : {A : Set} → (▹ A → A) → ▹ A
-
-fix : {A : Set} → (▹ A → A) → A
-fix f = f (dfix f)
 
 open import Data.Nat
   hiding (_≟_)
 
+open import Guarded
+pure  = next
+_<*>_ = _⊛_
+
 open import Context        public
   hiding ([_])
 
-infix  2 ▹_
 infix  3 _⊢_
 
 infixr 5 ƛ_
@@ -78,13 +40,13 @@ data _⊢_ Γ where
       ---------
     → Γ ⊢ A
   ƛ_
-    : ▹ Γ , A ⊢ B
+    : ▹ (Γ , A ⊢ B)
       ----------------
-    → Γ       ⊢ A →̇ B
+    → Γ     ⊢ A →̇ B
 
   _·_
-    : ▹ Γ ⊢ A →̇ B
-    → ▹ Γ ⊢ A
+    : ▹ (Γ ⊢ A →̇ B)
+    → ▹ (Γ ⊢ A)
       ----------
     → Γ ⊢ B
 
@@ -92,8 +54,8 @@ data _⊢_ Γ where
     : Γ ⊢ ⊤̇ 
 
   ⟨_,_⟩
-    : ▹ Γ ⊢ A
-    → ▹ Γ ⊢ B
+    : ▹ (Γ ⊢ A)
+    → ▹ (Γ ⊢ B)
     → Γ ⊢ A ×̇ B
 
   proj₁_
@@ -129,8 +91,9 @@ wk = rename _ S_
 ------------------------------------------------------------------------------
 -- Substitution
 
-Subst : Cxt → Cxt → Set
-Subst Γ Γ′ = (∀ {A} → Γ ∋ A → Γ′ ⊢ A)
+Subst
+  : Cxt → Cxt → Set
+Subst Γ Γ′ = ∀ {A} → Γ ∋ A → Γ′ ⊢ A
 
 exts
   : Subst Γ Γ′
@@ -152,215 +115,234 @@ subst = fix λ subst▹ A σ → λ where
   (proj₁ L) → proj₁ λ k → subst▹ k _ σ (L k)
   (proj₂ L) → proj₂ λ k → subst▹ k _ σ (L k) 
 
+_⟪_⟫
+  : Γ  ⊢ A
+  → Subst Γ Γ′
+  → Γ′ ⊢ A
+M ⟪ σ ⟫ = subst _ σ M
+
 subst-zero
   : Γ ⊢ B
   → Subst (Γ , B) Γ
 subst-zero N Z     = N
 subst-zero N (S x) = ` x
 
-_[_] : Γ , B ⊢ A
-     → Γ ⊢ B
-     → Γ ⊢ A
+_[_]
+  : Γ , B ⊢ A
+  → Γ ⊢ B
+  → Γ ⊢ A
 M [ N ] = subst _ (subst-zero N) M
 ------------------------------------------------------------------------------
 -- Examples 
 
-L=⟨L₁,L₂⟩ : ∀ {A B} → ∅ ⊢ A ×̇ B
+L=⟨L₁,L₂⟩ : ∅ ⊢ A ×̇ B
 L=⟨L₁,L₂⟩ = fix λ L▹ →
   ⟨ next (proj₁ L▹)  , next (proj₂ L▹) ⟩
 
 Y : ∅ ⊢ (A →̇ A) →̇ A
-Y = fix λ M▹ → ƛ next (⦇ wk M▹ ⦈ · next (# 0))
+Y = fix λ M▹ → ƛ next ((pure wk ⊛ M▹) · next (# 0))
 
+Y′ : Γ , A ⊢ A
+   → Γ ⊢ A
+Y′ M = fix λ Y▹ → next (ƛ next M) · Y▹
 ------------------------------------------------------------------------------
 -- Single-step reduction
 
--- infix 3 _⊢_-→_
--- data _⊢_-→_ (Γ : Cxt) : (M N : Γ ⊢ A) → Set where
---   β-ƛ·
---     : Γ ⊢ (ƛ M) · N -→ M [ N ]
+infix 3 _⊢_-→_
+data _⊢_-→_ (Γ : Cxt) : (M N : Γ ⊢ A) → Set where
+  β-ƛ·
+    : Γ ⊢ next (ƛ next M) · (next N) -→ M [ N ]
 
---   β-⟨,⟩proj₁
---     : Γ ⊢ proj₁ ⟨ M , N ⟩ -→ M
+  β-⟨,⟩proj₁
+    : {N : ▹ (Γ ⊢ B)}
+    → Γ ⊢ proj₁ (next ⟨ next M , N ⟩) -→ M
 
---   β-⟨,⟩proj₂
---     : Γ ⊢ proj₂ ⟨ M , N ⟩ -→ N
+  β-⟨,⟩proj₂
+    : {M : ▹ (Γ ⊢ A)}
+    → Γ ⊢ proj₂ (next ⟨ M , next N ⟩) -→ N
 
---   ξ-ƛ
---     : Γ , A ⊢ M -→ M′
---     → Γ     ⊢ ƛ M -→ ƛ M′
+  ξ-ƛ
+    : Γ , A ⊢ M -→ M′
+    → Γ     ⊢ ƛ next M -→ ƛ next M′
 
---   ξ-·₁
---     : Γ ⊢ L -→ L′
---       ---------------
---     → Γ ⊢ L · M -→ L′ · M
+  ξ-·₁
+    : {M : ▹ (Γ ⊢ A)}
+    → Γ ⊢ L -→ L′
+      ---------------
+    → Γ ⊢ next L · M -→ next L′ · M
 
---   ξ-·₂
---     : Γ ⊢ M -→ M′
---       ---------------
---     → Γ ⊢ L · M -→ L · M′
+  ξ-·₂
+    : {L : ▹ (Γ ⊢ A →̇ B)}
+    → Γ ⊢ M -→ M′
+      ---------------
+    → Γ ⊢ L · next M -→ L · next M′
 
---   ξ-⟨,⟩₁
---     : Γ ⊢ M -→ M′ 
---       ---------------
---     → Γ ⊢ ⟨ M , N ⟩ -→ ⟨ M′ , N ⟩
+  ξ-⟨,⟩₁
+    : {N : ▹ (Γ ⊢ B)}
+    → Γ ⊢ M -→ M′
+      ---------------
+    → Γ ⊢ ⟨ next M , N ⟩ -→ ⟨ next M′ , N ⟩
 
---   ξ-⟨,⟩₂
---     : Γ ⊢ N -→ N′ 
---       ---------------
---     → Γ ⊢ ⟨ M , N ⟩ -→ ⟨ M , N′ ⟩
+  ξ-⟨,⟩₂
+    : {M : ▹ (Γ ⊢ A)}
+    → Γ ⊢ N -→ N′
+      -------------------------------------
+    → Γ ⊢ ⟨ M , next N ⟩ -→ ⟨ M , next N′ ⟩
 
---   ξ-proj₁
---     : Γ ⊢ L -→ L′
---     → Γ ⊢ proj₁ L -→ proj₁ L′
+  ξ-proj₁
+    : Γ ⊢ L -→ L′
+    → Γ ⊢ proj₁ next L -→ proj₁ next L′
 
---   ξ-proj₂
---     : Γ ⊢ L -→ L′
---     → Γ ⊢ proj₂ L -→ proj₂ L′
+  ξ-proj₂
+    : Γ ⊢ L -→ L′
+    → Γ ⊢ proj₂ next L -→ proj₂ next L′
 
--- ------------------------------------------------------------------------------
--- -- Multi-step beta-reduction
+------------------------------------------------------------------------------
+-- Multi-step beta-reduction
 
--- infix  0 begin_
--- infix  2 _⊢_-↠_
--- infixr 2 _-→⟨_⟩_ _-↠⟨_⟩_
--- infix  3 _∎
+infix  0 begin_
+infix  2 _⊢_-↠_
+infixr 2 _-→⟨_⟩_ _-↠⟨_⟩_
+infix  3 _∎
 
--- data _⊢_-↠_ (Γ : Cxt) : Γ ⊢ A → Γ ⊢ A → Set where
---   _∎ : (M : Γ ⊢ A) → Γ ⊢ M -↠ M
- 
---   _-→⟨_⟩_
---     : ∀ L
---     → Γ ⊢ L -→ M
---     → Γ ⊢ M -↠ N
---       ----------
---     → Γ ⊢ L -↠ N
+data _⊢_-↠_ (Γ : Cxt) : Γ ⊢ A → Γ ⊢ A → Set where
+  _∎ : (M : Γ ⊢ A) → Γ ⊢ M -↠ M
 
--- begin_
---   : Γ ⊢ M -↠ N
---   → Γ ⊢ M -↠ N
--- begin M-↠N = M-↠N
+  _-→⟨_⟩_
+    : ∀ L
+    → Γ ⊢ L -→ M
+    → Γ ⊢ M -↠ N
+      ----------
+    → Γ ⊢ L -↠ N
 
--- _-↠⟨_⟩_
---   : ∀ L
---   → Γ ⊢ L -↠ M
---   → Γ ⊢ M -↠ N
---   → Γ ⊢ L -↠ N
--- M -↠⟨ M ∎ ⟩ M-↠N                = M-↠N
--- L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -↠⟨ M-↠N ⟩ N-↠N′)
+begin_
+  : Γ ⊢ M -↠ N
+  → Γ ⊢ M -↠ N
+begin M-↠N = M-↠N
 
--- data Value : (M : ∅ ⊢ A) → Set where
---   ƛ_
---     : (N : ∅ , A ⊢ B)
---       -------------------
---     → Value (ƛ N)
+_-↠⟨_⟩_
+  : ∀ L
+  → Γ ⊢ L -↠ M
+  → Γ ⊢ M -↠ N
+  → Γ ⊢ L -↠ N
+M -↠⟨ M ∎ ⟩ M-↠N                = M-↠N
+L -↠⟨ L -→⟨ L-↠M ⟩ M-↠N ⟩ N-↠N′ = L -→⟨ L-↠M ⟩ (_ -↠⟨ M-↠N ⟩ N-↠N′)
 
---   ⟨⟩
---     : Value ⟨⟩
+------------------------------------------------------------------------------
+-- Multi-step reduction is a congruence
 
---   ⟨_,_⟩
---     : (M : ∅ ⊢ A)
---     → (N : ∅ ⊢ B)
---     → Value ⟨ M , N ⟩
+ƛ-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ ƛ next M -↠ ƛ next M′
+ƛ-↠ (M ∎)                 = ƛ next M ∎
+ƛ-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
+  ƛ next M -→⟨ ξ-ƛ M→M₁ ⟩ ƛ-↠ M₁-↠M₂
 
--- ------------------------------------------------------------------------------
--- -- Progress theorem i.e. one-step evaluator
+·₁-↠
+  : {N : ▹ (Γ ⊢ _)}
+  → _ ⊢ M -↠ M′
+  → _ ⊢ (next M) · N -↠ (next M′) · N
+·₁-↠ (M ∎)                 = next M · _ ∎
+·₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
+  next M · _ -→⟨ ξ-·₁ M→M₁ ⟩ ·₁-↠ M₁-↠M₂
 
--- data Progress (M : ∅ ⊢ A) : Set where
---   step
---     : ∅ ⊢ M -→ N
---       --------------
---     → Progress M
+·₂-↠
+  : ∀ {M : ▹ (Γ ⊢ A →̇ B)}
+  → _ ⊢ N -↠ N′
+  → _ ⊢ M · (next N) -↠ M · (next N′)
+·₂-↠ (N ∎)                 = _ · next N ∎
+·₂-↠ (N -→⟨ N→N₁ ⟩ N₁-↠N₂) =
+  _ · next N -→⟨ ξ-·₂ N→N₁ ⟩ ·₂-↠ N₁-↠N₂
 
---   done
---     : Value M
---     → Progress M
+·-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ N -↠ N′
+  → _ ⊢ next M · next N -↠ next M′ · next N′
+·-↠ M-↠M′ N-↠N′ = begin
+  _ · _
+    -↠⟨ ·₁-↠ M-↠M′ ⟩
+  _ · _
+    -↠⟨ ·₂-↠ N-↠N′ ⟩
+  _ · _ ∎ 
 
--- progress : (M : ∅ ⊢ A) → Progress M
--- progress (ƛ M)       = done (ƛ M)
--- progress (M · N)    with progress M | progress N
--- ... | step M→M′   | _         = step (ξ-·₁ M→M′)
--- ... | _           | step N→N′ = step (ξ-·₂ N→N′)
--- ... | done (ƛ M′) | done vN   = step β-ƛ·
--- progress ⟨⟩          = done ⟨⟩
--- progress ⟨ M , N ⟩   = done ⟨ M , N ⟩
--- progress (proj₁ MN) with progress MN
--- ... | step M-→N      = step (ξ-proj₁ M-→N)
--- ... | done ⟨ _ , _ ⟩ = step β-⟨,⟩proj₁
--- progress (proj₂ MN) with progress MN
--- ... | step M-→N      = step (ξ-proj₂ M-→N)
--- ... | done ⟨ M , N ⟩ = step β-⟨,⟩proj₂
+proj₁-↠
+  : _ ⊢ L -↠ L′ → _ ⊢ proj₁ next L -↠ proj₁ next L′
+proj₁-↠ (L ∎)                 = proj₁ next L ∎
+proj₁-↠ (L -→⟨ L→L₁ ⟩ L₁-↠L₂) =
+  proj₁ next L -→⟨ ξ-proj₁ L→L₁ ⟩ proj₁-↠ L₁-↠L₂
 
--- ------------------------------------------------------------------------------
--- -- Multi-step reduction is a congruence
+proj₂-↠
+  : _ ⊢ L -↠ L′
+  → _ ⊢ proj₂ next L -↠ proj₂ next L′
+proj₂-↠ (L ∎)                 = proj₂ next L ∎
+proj₂-↠ (L -→⟨ L→L₂ ⟩ L₂-↠L₂) =
+  proj₂ next L -→⟨ ξ-proj₂ L→L₂ ⟩ proj₂-↠ L₂-↠L₂
 
--- ƛ-↠
---   : _ ⊢ M -↠ M′
---   → _ ⊢ ƛ M -↠ ƛ M′
--- ƛ-↠ (M ∎)                 = ƛ M ∎
--- ƛ-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
---   ƛ M -→⟨ ξ-ƛ M→M₁ ⟩ ƛ-↠ M₁-↠M₂
+⟨,⟩₁-↠
+  : {N : ▹ (Γ ⊢ B)}
+  → _ ⊢ M -↠ M′
+  → _ ⊢ ⟨ next M , N ⟩ -↠ ⟨ next M′ , N ⟩
+⟨,⟩₁-↠ (M ∎)                 = ⟨ next M , _ ⟩ ∎
+⟨,⟩₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
+  ⟨ next M , _ ⟩ -→⟨ ξ-⟨,⟩₁ M→M₁ ⟩ ⟨,⟩₁-↠ M₁-↠M₂
 
--- ·₁-↠
---   : _ ⊢ M -↠ M′
---   → _ ⊢ M · N -↠ M′ · N
--- ·₁-↠ (M ∎)                 = M · _ ∎
--- ·₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
---   M · _ -→⟨ ξ-·₁ M→M₁ ⟩ ·₁-↠ M₁-↠M₂
+⟨,⟩₂-↠
+  : {M : ▹ (Γ ⊢ A)}
+  → _ ⊢ N -↠ N′
+  → _ ⊢ ⟨ M , next N ⟩ -↠ ⟨ M , next N′ ⟩
+⟨,⟩₂-↠ (N ∎)                 = ⟨ _ , next N ⟩ ∎
+⟨,⟩₂-↠ (N -→⟨ N→N₁ ⟩ N₁-↠N₂) =
+  ⟨ _ , next N ⟩ -→⟨ ξ-⟨,⟩₂ N→N₁ ⟩ ⟨,⟩₂-↠ N₁-↠N₂
 
--- ·₂-↠
---   : _ ⊢ N -↠ N′
---   → _ ⊢ M · N -↠ M · N′
--- ·₂-↠ (N ∎)                 = _ · N ∎
--- ·₂-↠ (N -→⟨ N→N₁ ⟩ N₁-↠N₂) =
---   _ · N -→⟨ ξ-·₂ N→N₁ ⟩ ·₂-↠ N₁-↠N₂
+⟨,⟩-↠
+  : _ ⊢ M -↠ M′
+  → _ ⊢ N -↠ N′
+  → _ ⊢ ⟨ next M , next N ⟩ -↠ ⟨ next M′ , next N′ ⟩
+⟨,⟩-↠ M↠M′ N↠N′ = begin
+  ⟨ _ , _ ⟩
+    -↠⟨ ⟨,⟩₁-↠ M↠M′ ⟩
+  ⟨ _ , _ ⟩
+    -↠⟨ ⟨,⟩₂-↠ N↠N′ ⟩
+  ⟨ _ , _ ⟩
+    ∎
 
--- ·-↠
---   : _ ⊢ M -↠ M′
---   → _ ⊢ N -↠ N′
---   → _ ⊢ M · N -↠ M′ · N′
--- ·-↠ M-↠M′ N-↠N′ = begin
---   _ · _
---     -↠⟨ ·₁-↠ M-↠M′ ⟩
---   _ · _
---     -↠⟨ ·₂-↠ N-↠N′ ⟩
---   _ · _ ∎ 
+------------------------------------------------------------------------------
+-- Progress for ∞STLC
 
--- proj₁-↠
---   : _ ⊢ L -↠ L′ → _ ⊢ proj₁ L -↠ proj₁ L′
--- proj₁-↠ (L ∎)                 = proj₁ L ∎
--- proj₁-↠ (L -→⟨ L→L₁ ⟩ L₁-↠L₂) =
---   proj₁ L -→⟨ ξ-proj₁ L→L₁ ⟩ proj₁-↠ L₁-↠L₂
+data Value : (M : ∅ ⊢ A) → Set where
+  ƛ_
+    : (N : ▹ (∅ , A ⊢ B))
+      -------------------
+    → Value (ƛ N)
 
--- proj₂-↠
---   : _ ⊢ L -↠ L′
---   → _ ⊢ proj₂ L -↠ proj₂ L′
--- proj₂-↠ (L ∎)                 = proj₂ L ∎
--- proj₂-↠ (L -→⟨ L→L₂ ⟩ L₂-↠L₂) =
---   proj₂ L -→⟨ ξ-proj₂ L→L₂ ⟩ proj₂-↠ L₂-↠L₂
+  ⟨⟩
+    : Value ⟨⟩
 
--- ⟨,⟩₁-↠
---   : _ ⊢ M -↠ M′
---   → _ ⊢ ⟨ M , N ⟩ -↠ ⟨ M′ , N ⟩
--- ⟨,⟩₁-↠ (M ∎)                 = ⟨ M , _ ⟩ ∎
--- ⟨,⟩₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
---   ⟨ M , _ ⟩ -→⟨ ξ-⟨,⟩₁ M→M₁ ⟩ ⟨,⟩₁-↠ M₁-↠M₂
+  ⟨_,_⟩
+    : (M : ▹ (∅ ⊢ A))
+    → (N : ▹ (∅ ⊢ B))
+    → Value ⟨ M , N ⟩
 
--- ⟨,⟩₂-↠
---   : _ ⊢ N -↠ N′
---   → _ ⊢ ⟨ M , N ⟩ -↠ ⟨ M , N′ ⟩
--- ⟨,⟩₂-↠ (N ∎)                 = ⟨ _ , N ⟩ ∎
--- ⟨,⟩₂-↠ (N -→⟨ N→N₁ ⟩ N₁-↠N₂) =
---   ⟨ _ , N ⟩ -→⟨ ξ-⟨,⟩₂ N→N₁ ⟩ ⟨,⟩₂-↠ N₁-↠N₂
+------------------------------------------------------------------------------
+-- Progress theorem i.e. one-step evaluator
 
--- ⟨,⟩-↠
---   : _ ⊢ M -↠ M′
---   → _ ⊢ N -↠ N′
---   → _ ⊢ ⟨ M , N ⟩ -↠ ⟨ M′ , N′ ⟩
--- ⟨,⟩-↠ M↠M′ N↠N′ = begin
---   ⟨ _ , _ ⟩
---     -↠⟨ ⟨,⟩₁-↠ M↠M′ ⟩
---   ⟨ _ , _ ⟩
---     -↠⟨ ⟨,⟩₂-↠ N↠N′ ⟩
---   ⟨ _ , _ ⟩
---     ∎
+data Progress (M : ∅ ⊢ A) : Set where
+  step
+    : ∅ ⊢ M -→ N
+      --------------
+    → Progress M
+
+  done
+    : Value M
+    → Progress M
+
+{-
+progress : (A : Type) → (M : ∅ ⊢ A) → Progress M
+progress = fix λ progress▹ A → λ where
+  (ƛ M)      → {!!}
+  (M · N)    → {!!}
+  ⟨⟩         → {!!}
+  ⟨ M , N ⟩  → {!!}
+  (proj₁ L)  → {!!}
+  (proj₂ L)  → {!!}
+-}
