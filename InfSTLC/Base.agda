@@ -7,7 +7,7 @@ module InfSTLC.Base where
 open import Data.Nat
   hiding (_≟_)
 
-open import Guarded
+open import Later
 pure  = next
 _<*>_ = _⊛_
 
@@ -139,12 +139,10 @@ L=⟨L₁,L₂⟩ : ∅ ⊢ A ×̇ B
 L=⟨L₁,L₂⟩ = fix λ L▹ →
   ⟨ next (proj₁ L▹)  , next (proj₂ L▹) ⟩
 
-Y : ∅ ⊢ (A →̇ A) →̇ A
-Y = fix λ M▹ → ƛ next ((pure wk ⊛ M▹) · next (# 0))
-
-Y′ : Γ , A ⊢ A
+μ_ : Γ , A ⊢ A
    → Γ ⊢ A
-Y′ M = fix λ Y▹ → next (ƛ next M) · Y▹
+μ M = fix λ Y▹ → next (ƛ next M) · Y▹
+
 ------------------------------------------------------------------------------
 -- Single-step reduction
 
