@@ -55,12 +55,14 @@ module _ {godelNumbering : GodelNumbering} where
   □_ : Assembly → Assembly
   □ X = record { Carrier = |X|
                ; type = ℕ̇
-               ; _⊩_ = λ a x → ⌞ a ⌟ ⊩ₓ x
-               ; realiserOf = lift ∘ f }
+               ; _⊩_ = λ n x → ∃[ a ] ((∅ ⊢ n -↠ ⌜ a ⌝) × (a ⊩ₓ x))
+               ; realiserOf = realiserOf□ }
     where
-      open Assembly X renaming (Carrier to |X|; _⊩_ to _⊩ₓ_; realiserOf to f)
-      lift : ∀ {x} → ∃[ a ] (a ⊩ₓ x) → ∃[ b ] (⌞ b ⌟ ⊩ₓ x)
-      lift (a , a⊩x) rewrite P.sym (⌞⌜⌝⌟-id (⌜ a ⌝ -↠-Reasoning.∎)) = ⌜ a ⌝ , a⊩x
+      open Assembly X renaming (Carrier to |X|; _⊩_ to _⊩ₓ_)
+      open -↠-Reasoning
+      realiserOf□ : ∀ x → ∃[ n ] ∃[ a ] ((∅ ⊢ n -↠ ⌜ a ⌝) × (a ⊩ₓ x))
+      realiserOf□ x with X .realiserOf x
+      ... | a , a⊩x = ⌜ a ⌝ , a , (_ ∎) , a⊩x
 
   GL : ∀ X → Trackable (□ ((□ X) ⇒ X)) (□ X)
   GL X = igfix (X .type) , (λ (r , f , r⊩f)→ {!  !}) , {! !}
@@ -78,13 +80,13 @@ module _ {godelNumbering : GodelNumbering} where
 
   ☒X→̇□X : ∀ X a → Trackable (☒ X by a) (□ X)
   ☒X→̇□X X a = ƛ ↑ ⌜ a ⌝ , (λ (x , a⊩x) → x) , λ _ → {! eval-gnum a⊩x !}
-
+{-
   ¬☒X→̇□¬☒X : ∀ X a → Trackable ((☒ X by a) ⇒ ⊥̇) (□ ((☒ X by a) ⇒ ⊥̇))
   ¬☒X→̇□¬☒X X a = ƛ zero , id , λ r {_} {(x , a⊩x)} _ → r {⟨⟩} {x , a⊩x} tt
 
   ☒□X→̇X : ∀ X n → Trackable (☒ (□ X) by n) X
   ☒□X→̇X X n = ƛ ↑ ⌞ n ⌟ , (λ (x , x⊩a) → x) , λ { {a} {x , ⌞n⌟⊩x} tt → {! ⌞n⌟⊩x !} }
-
+-}
   ☒X→̇☒☒X : ∀ X a → Trackable (☒ X by a) (☒ (☒ X by a) by ⟨⟩)
   ☒X→̇☒☒X X _ = ƛ # 0 , (_, tt) , λ _ → tt
 

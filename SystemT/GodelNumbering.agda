@@ -17,9 +17,7 @@ private
 record GodelNumbering : Set where
   field
     ⌜_⌝ : ∅ ⊢ A → ∅ ⊢ ℕ̇
-
-    ⌞_⌟ : {A : Type} → ∅ ⊢ ℕ̇ → ∅ ⊢ A
-    ⌞⌜⌝⌟-id : (∅ ⊢ n -↠ ⌜ a ⌝) → ⌞ n ⌟ ≡ a
+    ⌜⌝-injective : ⌜ a ⌝ ≡ ⌜ b ⌝ → a ≡ b
 
     -- ⊢ □ (A → B) →̇ □ A →̇ □ B
     app : ∅ ⊢ ℕ̇ →̇ ℕ̇ →̇ ℕ̇
@@ -101,27 +99,28 @@ record GodelNumbering : Set where
 
   -- ⊢ □ A →̇ A   ⇒   ⊢ A →̇ A   ⇒   ⊢ A
   selfEval⇒fixpoint
-    : Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ {n} → ∅ ⊢ e · n -↠ ⌞ n ⌟)
+    : Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ a → ∅ ⊢ e · ⌜ a ⌝ -↠ a)
     → (f : ∅ ⊢ A →̇ A)
     → Σ[ a ∈ ∅ ⊢ A ] (∅ ⊢ a -↠ f · a)
-  selfEval⇒fixpoint (e , e-↠⌞⌟) f = gfix (ƛ ↑ f · (↑ e · # 0)) ,
+  selfEval⇒fixpoint {A = A} (e , e-⌜⌝-id) f = gfix f∘e ,
     (begin
-      gfix (ƛ ↑ f · (↑ e · # 0))
+      gfix f∘e
     -↠⟨ gfix-spec ⟩
-      (ƛ ↑ f · (↑ e · # 0)) · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝
+      f∘e · ⌜ gfix f∘e ⌝
     -→⟨ β-ƛ· ⟩
-      ↑ f ⟪ _ ⟫ · (↑ e ⟪ _ ⟫ · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝)
+      ↑ f ⟪ _ ⟫ · (↑ e ⟪ _ ⟫ · ⌜ gfix f∘e ⌝)
     ≡⟨ P.cong₂ (λ M N → M · (N · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝)) (subst-↑ _ f) (subst-↑ _ e) ⟩
-      f · (e · ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝)
-    -↠⟨ ·₂-↠ e-↠⌞⌟ ⟩
-      f · (⌞ ⌜ gfix (ƛ ↑ f · (↑ e · # 0)) ⌝ ⌟)
-    ≡⟨ P.cong (f ·_) (⌞⌜⌝⌟-id (_ ∎)) ⟩
-      f · gfix (ƛ (↑ f) · ((↑ e) · # 0))
+      f · (e · ⌜ gfix f∘e ⌝)
+    -↠⟨ ·₂-↠ (e-⌜⌝-id (gfix f∘e))  ⟩
+      f · gfix (f∘e)
     ∎)
-    where open -↠-Reasoning
+    where
+      open -↠-Reasoning
+      f∘e : ∅ ⊢ ℕ̇ →̇ A
+      f∘e = ƛ ↑ f · (↑ e · # 0)
 
   -- ¬ ∀ A. □ A → A
-  ¬∃selfEval : (∀ A → Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ {n} → ∅ ⊢ e · n -↠ ⌞ n ⌟)) → ⊥
+  ¬∃selfEval : (∀ A → Σ[ e ∈ ∅ ⊢ ℕ̇ →̇ A ] (∀ a → ∅ ⊢ e · ⌜ a ⌝ -↠ a)) → ⊥
   ¬∃selfEval e with selfEval⇒fixpoint (e ℕ̇) (ƛ suc (# 0))
   ... | a , a-↠suca = {! !}
 
