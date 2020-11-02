@@ -62,7 +62,15 @@ module _ {godelNumbering : GodelNumbering} where
       open -↠-Reasoning
 
   GL : ∀ X → Trackable (□ ((□ X) ⇒ X)) (□ X)
-  GL X = igfix (X .type) , (λ (r , f , r⊩f)→ {!  !}) , {! !}
+  GL X = igfix (X .type) , (λ (r , f , r⊩f)→ gfix r , {! !} , {! !}) , λ {n} {(r , _ , _)} n-↠⌜r⌝ →
+    begin
+      igfix (X .type) · n
+    -↠⟨ ·₂-↠ n-↠⌜r⌝ ⟩
+      igfix (X .type) · ⌜ r ⌝
+    -↠⟨ igfix-⌜⌝ ⟩
+      ⌜ gfix r ⌝
+    ∎
+    where open -↠-Reasoning
 
   ☒_by_ : (X : Assembly) → (a : ∅ ⊢ X .type) → Assembly
   ☒ X by a = record
