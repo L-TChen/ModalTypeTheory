@@ -32,7 +32,7 @@ postulate
 ▸ A  = (@tick x : Tick) → A x
 
 next : A → ▹ A
-next x _ = x
+next x k = x
 
 _⊛_ : {B : A → Set}
   → ▹ ((a : A) → B a)
@@ -42,10 +42,18 @@ _⊛_ : {B : A → Set}
 map▹ : (f : A → B) → ▹ A → ▹ B
 map▹ f x k = f (x k)
 
-transpLater : ∀ (A : I → ▹ Set) → ▸ (A i0) → ▸ (A i1)
+PathPLater : {A : I → Set} {x : ▹ A i0} {y : ▹ A i1}
+  → PathP (λ i → ▹ A i) x y → (▸ λ α → PathP A (x α) (y α) )
+PathPLater p α i = p i α
+
+LaterPathP : {A : I → Set} {x : ▹ A i0} {y : ▹ A i1}
+  → (▸ λ α → PathP A (x α) (y α) ) → PathP (λ i → ▹ A i) x y
+LaterPathP p i α = p α i
+
+transpLater      : (A : I → ▹ Set) → ▸ (A i0) → ▸ (A i1)
 transpLater A u0 a = transp (\ i → A i a) i0 (u0 a)
 
-transpLater-prim : (A : I → ▹ Set) → (x : ▸ (A i0)) → ▸ (A i1)
+transpLater-prim : (A : I → ▹ Set) → ▸ (A i0) → ▸ (A i1)
 transpLater-prim A x = transp (\ i → ▸ (A i)) i0 x
 
 transpLater-test : ∀ (A : I → ▹ Set) → (x : ▸ (A i0)) → transpLater-prim A x ≡ transpLater A x
@@ -73,12 +81,13 @@ _$>_ : {f g : A → B}
 (eq $> x) i = eq i x
 
 later-ext : {f g : ▹ A}
-  → (▸ \ α → f α ≡ g α)
+  → (▸ λ α → f α ≡ g α)
   → f ≡ g
 later-ext eq i k = eq k i
 
 postulate
   dfix   : (f : ▹ A → A) → ▹ A
+  -- d is for deleayed.
   dfix-β : (f : ▹ A → A) → dfix f ≡ next (f (dfix f))
 
 fix : (f : ▹ A → A) → A
