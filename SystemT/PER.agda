@@ -52,14 +52,15 @@ module _ {godelNumbering : GodelNumbering} where
       open PER X renaming (type to A; _~[_]_ to _~ˣ[_]_; sym to ~ˣ-sym; trans to ~ˣ-trans; restriction to rˣ)
       open PER Y renaming (type to B; _~[_]_ to _~ʸ[_]_; sym to ~ʸ-sym; trans to ~ʸ-trans; restriction to rʸ)
 
+      -- TODO: Use c =β r · a, d =β r · a here
       _~[_]_ : ∅ ⊢ A →̇ B → ℕ → ∅ ⊢ A →̇ B → Set
-      r ~[ i ] s = ∀ {a b j} → .(j ≤ i) → a ~ˣ[ j ] b → (r · a) ~ʸ[ j ] (s · b)
+      r ~[ i ] s = ∀ {a b c d j} → .(j ≤ i) → a ~ˣ[ j ] b → ∅ ⊢ c -↠ r · a → ∅ ⊢ d -↠ s · b → c ~ʸ[ j ] d
 
       sym : ∀ i → Symmetric _~[ i ]_
-      sym i r~s {j = j} j≤i a~b = ~ʸ-sym j (r~s j≤i (~ˣ-sym j a~b))
+      sym i r~s {j = j} j≤i a~b c-↠ra d-↠sb = ~ʸ-sym j (r~s j≤i (~ˣ-sym j a~b) d-↠sb c-↠ra)
 
       trans : ∀ i → Transitive _~[ i ]_
-      trans i r~s s~t {j = j} j≤i a~b = ~ʸ-trans j (r~s j≤i a~b) (s~t j≤i b~b)
+      trans i r~s s~t {j = j} j≤i a~b c-↠ra d-↠tb = ~ʸ-trans j (r~s j≤i a~b c-↠ra -↠-refl) (s~t j≤i b~b -↠-refl d-↠tb)
         where b~b = ~ˣ-trans j (~ˣ-sym j a~b) a~b
 
       restriction : ∀ i {a b} → a ~[ suc i ] b → a ~[ i ] b
@@ -96,9 +97,16 @@ module _ {godelNumbering : GodelNumbering} where
       restriction zero    (a , m-↠⌜a⌝ , n-↠⌜a⌝ , _  ) = a , m-↠⌜a⌝ , n-↠⌜a⌝ , tt
       restriction (suc i) (a , m-↠⌜a⌝ , n-↠⌜a⌝ , X∋a) = a , m-↠⌜a⌝ , n-↠⌜a⌝ , rˣ i X∋a
 
+  lob : ∀ {X} i r → (□ X ⇒ X) ∋[ i ] r → X ∋[ i ] gfix r
+  lob zero    r □X⇒X∋r = □X⇒X∋r ≤-refl (gfix r , -↠-refl , -↠-refl , tt) gfix-spec gfix-spec
+  lob {X = X} (suc i) r □X⇒X∋r = □X⇒X∋r ≤-refl (gfix r , -↠-refl , -↠-refl , lob i r (PER.restriction (□ X ⇒ X) i □X⇒X∋r)) gfix-spec gfix-spec
+
   GL : ∀ X → ∃[ r ] ((□ (□ X ⇒ X) ⇒ □ X) ∋ r)
   GL X = igfix (PER.type X) , gs
     where
       gs : ∀ i → (□ (□ X ⇒ X) ⇒ □ X) ∋[ i ] igfix (PER.type X)
-      gs i {j = zero}  j≤i (r , m-↠⌜r⌝ , n-↠⌜r⌝ , ⊤ )     = gfix r , -↠-trans (·₂-↠ m-↠⌜r⌝) igfix-⌜⌝ , -↠-trans (·₂-↠ n-↠⌜r⌝) igfix-⌜⌝ , tt
-      gs i {j = suc j} j≤i (r , m-↠⌜r⌝ , n-↠⌜r⌝ , □X⇒X∋r) = gfix r , -↠-trans (·₂-↠ m-↠⌜r⌝) igfix-⌜⌝ , -↠-trans (·₂-↠ n-↠⌜r⌝) igfix-⌜⌝ , {! □X⇒X∋r ≤-refl (□X∋⌜gfix r⌝) !}
+      gs i {j = zero}  j≤i (r , m-↠⌜r⌝ , n-↠⌜r⌝ , ⊤     ) c-↠igfixm d-↠igfixn =
+        gfix r , -↠-trans (-↠-trans c-↠igfixm (·₂-↠ m-↠⌜r⌝)) igfix-⌜⌝ , -↠-trans (-↠-trans d-↠igfixn (·₂-↠ n-↠⌜r⌝)) igfix-⌜⌝ , tt
+      gs i {j = suc j} j≤i (r , m-↠⌜r⌝ , n-↠⌜r⌝ , □X⇒X∋r) c-↠igfixm d-↠igfixn =
+        gfix r , -↠-trans (-↠-trans c-↠igfixm (·₂-↠ m-↠⌜r⌝)) igfix-⌜⌝ , -↠-trans (-↠-trans d-↠igfixn (·₂-↠ n-↠⌜r⌝)) igfix-⌜⌝ , lob j r □X⇒X∋r
+
