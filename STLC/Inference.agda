@@ -172,25 +172,28 @@ synthesize Γ (` x)              with lookup Γ x
 synthesize Γ (L · M) with synthesize Γ L
 ... | no  ¬∃                      =
   no λ{ (_ , ⊢L  · _) → ¬∃ (_ , ⊢L ) }
-... | yes (⊤̇     , ⊢L)            = no λ {(_ , ⊢L′ · _) → ⊤≢→̇ (uniq-⇒ ⊢L ⊢L′) }
-... | yes (A ×̇ B , ⊢L)            = no λ {(_ , ⊢L′ · _) → ×̇≢→̇ (uniq-⇒ ⊢L ⊢L′) }
-... | yes (□ A   , ⊢L)            = no λ {(_ , ⊢L′ · _) → □≢→̇ (uniq-⇒ ⊢L ⊢L′) }
+... | yes (ℕ̇     , ⊢L)            = no λ {(_ , ⊢L′ · _) → ℕ≢→ (uniq-⇒ ⊢L ⊢L′)}
+... | yes (⊤̇     , ⊢L)            = no λ {(_ , ⊢L′ · _) → ⊤≢→ (uniq-⇒ ⊢L ⊢L′) }
+... | yes (A ×̇ B , ⊢L)            = no λ {(_ , ⊢L′ · _) → ×≢→ (uniq-⇒ ⊢L ⊢L′) }
+... | yes (□ A   , ⊢L)            = no λ {(_ , ⊢L′ · _) → □≢→ (uniq-⇒ ⊢L ⊢L′) }
 ... | yes (A →̇ B , ⊢L)            with inherit Γ M A
 ...   | no ¬⊢M = no (¬arg ⊢L ¬⊢M)
 ...   | yes ⊢M = yes (B , ⊢L · ⊢M)
 synthesize Γ (proj₁ M)          with synthesize Γ M
 ... | no ¬∃ =
   no λ { (_ , ⊢proj₁ ⊢M) → ¬∃ (_ ×̇ _ , ⊢M) }
-... | yes (⊤̇     , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ⊤≢×̇ (uniq-⇒ ⊢M ⊢M′)}
-... | yes (A →̇ B , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ×̇≢→̇ (uniq-⇒ ⊢M′ ⊢M) }
-... | yes (□ A   , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → □≢×̇ (uniq-⇒ ⊢M ⊢M′) }
+... | yes (ℕ̇     , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ℕ≢× (uniq-⇒ ⊢M ⊢M′)}
+... | yes (⊤̇     , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ⊤≢× (uniq-⇒ ⊢M ⊢M′)}
+... | yes (A →̇ B , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → ×≢→ (uniq-⇒ ⊢M′ ⊢M) }
+... | yes (□ A   , ⊢M)            = no λ {(_ , ⊢proj₁ ⊢M′) → □≢× (uniq-⇒ ⊢M ⊢M′) }
 ... | yes (A ×̇ B , ⊢M)            = yes (A , ⊢proj₁ ⊢M)
 synthesize Γ (proj₂ M)          with synthesize Γ M
 ... | no ¬∃ =
   no λ { (_ , ⊢proj₂ ⊢M) → ¬∃ (_ ×̇ _ , ⊢M) }
-... | yes (⊤̇     , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ⊤≢×̇ (uniq-⇒ ⊢M ⊢M′)}
-... | yes (A →̇ B , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ×̇≢→̇ (uniq-⇒ ⊢M′ ⊢M) }
-... | yes (□ A   , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → □≢×̇ (uniq-⇒ ⊢M ⊢M′) }
+... | yes (ℕ̇     , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ℕ≢× (uniq-⇒ ⊢M ⊢M′)}
+... | yes (⊤̇     , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ⊤≢× (uniq-⇒ ⊢M ⊢M′)}
+... | yes (A →̇ B , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → ×≢→ (uniq-⇒ ⊢M′ ⊢M) }
+... | yes (□ A   , ⊢M)            = no λ {(_ , ⊢proj₂ ⊢M′) → □≢× (uniq-⇒ ⊢M ⊢M′) }
 ... | yes (A ×̇ B , ⊢M)            = yes (B , ⊢proj₂ ⊢M)
 synthesize Γ (M ⇐ A)            with inherit Γ M A
 ... | no ¬⊢M = no λ { (_ , ⊢⇐ ⊢M) → ¬⊢M ⊢M }
@@ -199,10 +202,12 @@ synthesize Γ (M ⇐ A)            with inherit Γ M A
 inherit Γ (ƛ x ⇒ M) (A →̇ B) with inherit (Γ , x ⦂ A) M B
 ... | no ¬⊢M = no λ { (⊢ƛ M) → ¬⊢M M }
 ... | yes ⊢M = yes (⊢ƛ ⊢M)
+inherit Γ (ƛ x ⇒ M) ℕ̇       = no λ ()
 inherit Γ (ƛ x ⇒ M) ⊤̇       = no λ ()
 inherit Γ (ƛ x ⇒ M) (_ ×̇ _) = no λ ()
 inherit Γ (ƛ x ⇒ M) (□ A)   = no λ ()
 inherit Γ ⟨⟩ ⊤̇       = yes ⊢⟨⟩
+inherit Γ ⟨⟩ ℕ̇       = no λ ()
 inherit Γ ⟨⟩ (_ ×̇ _) = no λ ()
 inherit Γ ⟨⟩ (_ →̇ _) = no λ () 
 inherit Γ ⟨⟩ (□ _)   = no λ () 
@@ -210,9 +215,10 @@ inherit Γ ⟨ M , N ⟩ (A ×̇ B) with inherit Γ M A | inherit Γ N B
 ... | no  ⊬M | _      = no λ { ⟨ ⊢M , _ ⟩ → ⊬M ⊢M }
 ... | yes _  | no ⊬N  = no λ { ⟨ _ , ⊢N ⟩ → ⊬N ⊢N }
 ... | yes ⊢M | yes ⊢N = yes ⟨ ⊢M , ⊢N ⟩
-inherit Γ ⟨ M , N ⟩ ⊤̇       = no λ()
-inherit Γ ⟨ M , N ⟩ (_ →̇ _) = no λ()
-inherit Γ ⟨ M , N ⟩ (□ _)   = no λ()
+inherit Γ ⟨ _ , _ ⟩ ℕ̇       = no λ()
+inherit Γ ⟨ _ , _ ⟩ ⊤̇       = no λ()
+inherit Γ ⟨ _ , _ ⟩ (_ →̇ _) = no λ()
+inherit Γ ⟨ _ , _ ⟩ (□ _)   = no λ()
 inherit Γ (M ⇒) B       with synthesize Γ M
 ... | no  ¬∃                =  no  (λ{ (⊢⇒ ⊢M _) → ¬∃ (_ , ⊢M) })
 ... | yes (A , ⊢M) with A ≟Tp B
