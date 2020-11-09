@@ -258,11 +258,11 @@ module -↠-Reasoning where
 
   -↠-trans
     : ∀ {L}
-    → Γ ⊢ L -→ M
+    → Γ ⊢ L -↠ M
     → Γ ⊢ M -↠ N
       ----------
     → Γ ⊢ L -↠ N
-  -↠-trans L-↠M M-↠N = _ -→⟨ L-↠M ⟩ M-↠N
+  -↠-trans L-↠M M-↠N = _ -↠⟨ L-↠M ⟩ M-↠N
 
 open -↠-Reasoning using (_⊢_-↠_; -↠-refl; -↠-reflexive; -↠-trans) public
 

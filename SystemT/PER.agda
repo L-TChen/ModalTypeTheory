@@ -1,21 +1,30 @@
 {-# OPTIONS --without-K #-}
 module SystemT.PER where
 
-open import Data.Product
-open import Data.Empty
-open import Data.Unit
-open import Relation.Binary using (Rel; Transitive; Symmetric)
+open import Data.Product as Product using (_×_; ∃-syntax; Σ-syntax; _,_)
+open import Data.Empty using (⊥; ⊥-elim)
+open import Data.Unit using (⊤; tt)
+open import Data.Nat using (ℕ; zero; suc; _≤_; z≤n; s≤s)
+open import Relation.Binary using (Transitive; Symmetric)
+open import Data.Nat.Properties using (≤-refl)
 open import Relation.Binary.PropositionalEquality as P using (_≡_)
-open import Function hiding (_∋_)
+open import Function using (id; _∘_; const)
+
 open import SystemT.Base hiding (□_; _,_; _∋_)
 open import SystemT.GodelNumbering
 
-private
-  variable
-    Γ : Cxt
-    A B C : Type
-    a b c : ∅ ⊢ A
-    m n : ∅ ⊢ ℕ̇
+------------------------------------------------------------------------
+-- Properties of _≤_
+
+m≤n⇒m≤n+1 : ∀ {m n} → m ≤ n → m ≤ suc n
+m≤n⇒m≤n+1 z≤n         = z≤n
+m≤n⇒m≤n+1 (s≤s m+1≤n) = s≤s (m≤n⇒m≤n+1 m+1≤n)
+
+m+1≤n+1⇒m≤n : ∀ {m n} → suc m ≤ suc n → m ≤ n
+m+1≤n+1⇒m≤n (s≤s m≤n) = m≤n
+
+m+1≤n⇒m≤n : ∀ {m n} → suc m ≤ n → m ≤ n
+m+1≤n⇒m≤n = m+1≤n+1⇒m≤n ∘ m≤n⇒m≤n+1
 
 module _ {godelNumbering : GodelNumbering} where
   open GodelNumbering godelNumbering
@@ -25,89 +34,71 @@ module _ {godelNumbering : GodelNumbering} where
 
   record PER : Set₁ where
     field
-      type    : Type
-      _~_     : Rel (∅ ⊢ type) _
-      ~-trans : Transitive _~_
-      ~-sym   : Symmetric _~_
+      type        : Type
+      _~[_]_      : ∅ ⊢ type → ℕ → ∅ ⊢ type → Set
+      sym         : ∀ i → Symmetric _~[ i ]_
+      trans       : ∀ i → Transitive _~[ i ]_
+      restriction : ∀ i {a b} → a ~[ suc i ] b → a ~[ i ] b
 
-  _⇒_ : PER → PER → PER
-  X ⇒ Y = record { type = τ →̇ σ ; _~_ = _~_ ; ~-trans = {! !} ; ~-sym = {! !} }
-    where
-      open PER X renaming (type to τ; _~_ to _~x_)
-      open PER Y renaming (type to σ; _~_ to _~y_)
-      _~_ : Rel (∅ ⊢ τ →̇ σ) _
-      r ~ s = ∀ {a b} → a ~x b → (r · a) ~y (s · b)
+  _∋[_]_ : (X : PER) → ℕ → (∅ ⊢ PER.type X) → Set
+  X ∋[ i ] a  = PER._~[_]_ X a i a
 
   _∋_ : (X : PER) → (∅ ⊢ PER.type X) → Set
-  X ∋ a  = PER._~_ X a a
+  X ∋ a  = ∀ i → X ∋[ i ] a
+
+  _⇒_ : PER → PER → PER
+  X ⇒ Y = record { type = A →̇ B; _~[_]_ = _~[_]_; trans = trans; sym = sym; restriction = restriction }
+    where
+      open PER X renaming (type to A; _~[_]_ to _~ˣ[_]_; sym to ~ˣ-sym; trans to ~ˣ-trans; restriction to rˣ)
+      open PER Y renaming (type to B; _~[_]_ to _~ʸ[_]_; sym to ~ʸ-sym; trans to ~ʸ-trans; restriction to rʸ)
+
+      _~[_]_ : ∅ ⊢ A →̇ B → ℕ → ∅ ⊢ A →̇ B → Set
+      r ~[ i ] s = ∀ {a b j} → .(j ≤ i) → a ~ˣ[ j ] b → (r · a) ~ʸ[ j ] (s · b)
+
+      sym : ∀ i → Symmetric _~[ i ]_
+      sym i r~s {j = j} j≤i a~b = ~ʸ-sym j (r~s j≤i (~ˣ-sym j a~b))
+
+      trans : ∀ i → Transitive _~[ i ]_
+      trans i r~s s~t {j = j} j≤i a~b = ~ʸ-trans j (r~s j≤i a~b) (s~t j≤i b~b)
+        where b~b = ~ˣ-trans j (~ˣ-sym j a~b) a~b
+
+      restriction : ∀ i {a b} → a ~[ suc i ] b → a ~[ i ] b
+      restriction i r~s j≤i = r~s (m≤n⇒m≤n+1 j≤i)
 
   ⊥̇ : PER
-  ⊥̇ = record { type = ⊤̇ ;  _~_ = λ _ _ → ⊥ ; ~-trans = λ () ; ~-sym = λ () }
-
-  □_ : PER → PER
-  □ X = record { type = ℕ̇ ; _~_ = _~_ ; ~-trans = {! !} ; ~-sym = {! !} }
-    where
-      _~_ : Rel (∅ ⊢ ℕ̇) _
-      m ~ n = ∃[ a ] ((X ∋ a) × (∅ ⊢ m -↠ ⌜ a ⌝) × (∅ ⊢ n -↠ ⌜ a ⌝))
-
-  GL : ∀ X → ∃[ r ] ((□ (□ X ⇒ X) ⇒ □ X) ∋ r)
-  GL X = igfix (PER.type X) , λ (r , m-↠⌜r⌝ , n-↠⌜r⌝) → gfix r , {! !} , {! !} , {! !}
-
-{-
-
-  Tracks : (X Y : Assembly) (r : ∅ ⊢ X .type →̇ Y .type) (f : X .Carrier → Y .Carrier) → Set
-  Tracks X Y r h = {a : ∅ ⊢ τ} {x : |X|} → a ⊩x x → (r · a) ⊩y (h x)
-    where
-      open Assembly X renaming (Carrier to |X|; type to τ; _⊩_ to _⊩x_; realiserOf to f)
-      open Assembly Y renaming (Carrier to |Y|; type to σ; _⊩_ to _⊩y_; realiserOf to g)
-
-  Trackable : (X Y : Assembly) → Set
-  Trackable X Y = ∃[ r ] ∃[ f ] (Tracks X Y r f)
-  _⇒_ : Assembly → Assembly → Assembly
-  X ⇒ Y = record
-    { Carrier = Trackable X Y
-    ; type = (X .type) →̇ (Y .type)
-    ; _⊩_ = λ r (_ , f , _) → Tracks X Y r f
-    ; realiserOf = λ (r , f , r⊩f) → r , r⊩f
+  ⊥̇ = record
+    { type = ⊤̇
+    ; _~[_]_ = λ a i b → ⊥
+    ; trans = λ i ()
+    ; sym = λ i ()
+    ; restriction = λ i ()
     }
 
-  ☒_by_ : (X : Assembly) → (a : ∅ ⊢ X .type) → Assembly
-  ☒ X by a = record
-    { Carrier    = ∃[ x ] (a ⊩ₓ x)
-    ; type       = ⊤̇ ; _⊩_ = λ _ _ → ⊤
-    ; realiserOf = λ _ → ⟨⟩ , tt }
+  □_ : PER → PER
+  □ X = record { type = ℕ̇; _~[_]_ = _~[_]_; trans = trans; sym = sym; restriction = restriction }
     where
-      open Assembly X renaming (Carrier to |X|; _⊩_ to _⊩ₓ_; realiserOf to f)
+      open PER X renaming (type to A; _~[_]_ to _~ˣ[_]_; sym to ~ˣ-sym; trans to ~ˣ-trans; restriction to rˣ)
+      _~[_]_ : ∅ ⊢ ℕ̇ → ℕ → ∅ ⊢ ℕ̇ → Set
+      m ~[ zero  ] n = Σ[ a ∈ ∅ ⊢ A ] ((∅ ⊢ m -↠ ⌜ a ⌝) × (∅ ⊢ n -↠ ⌜ a ⌝) × ⊤)
+      m ~[ suc i ] n = Σ[ a ∈ ∅ ⊢ A ] ((∅ ⊢ m -↠ ⌜ a ⌝) × (∅ ⊢ n -↠ ⌜ a ⌝) × (X ∋[ i ] a))
 
-  ☒X→̇X : ∀ X a → Trackable (☒ X by a) X
-  ☒X→̇X X a = ƛ (↑ a) , (λ (x , a⊩x) → x) , λ _ → {! a⊩x !}
+      sym : ∀ i → Symmetric _~[ i ]_
+      sym zero    (a , m-↠⌜a⌝ , n-↠⌜a⌝ , tt ) = a , n-↠⌜a⌝ , m-↠⌜a⌝ , tt
+      sym (suc i) (a , m-↠⌜a⌝ , n-↠⌜a⌝ , X∋a) = a , n-↠⌜a⌝ , m-↠⌜a⌝ , X∋a
 
-  ☒X→̇□X : ∀ X a → Trackable (☒ X by a) (□ X)
-  ☒X→̇□X X a = ƛ ↑ ⌜ a ⌝ , (λ (x , a⊩x) → x) , λ _ → {! eval-gnum a⊩x !}
+      -- TODO
+      -- By (normality of ⌜a⌝, ⌜b⌝ , n-↠⌜a⌝ , n-↠⌜b⌝), ⌜a⌝ ≡ ⌜b⌝ (needs confluence), thus a ≡ b by injectivity of ⌜_⌝
+      trans : ∀ i → Transitive _~[ i ]_
+      trans zero    (a , m-↠⌜a⌝ , n-↠⌜a⌝ , tt)  (b , n-↠⌜b⌝ , o-↠⌜b⌝ , tt ) = {! !}
+      trans (suc i) (a , m-↠⌜a⌝ , n-↠⌜a⌝ , X∋a) (b , n-↠⌜b⌝ , o-↠⌜b⌝ , X∋b) = {! !}
 
-  ¬☒X→̇□¬☒X : ∀ X a → Trackable ((☒ X by a) ⇒ ⊥̇) (□ ((☒ X by a) ⇒ ⊥̇))
-  ¬☒X→̇□¬☒X X a = ƛ zero , id , λ r {_} {(x , a⊩x)} _ → r {⟨⟩} {x , a⊩x} tt
+      restriction : ∀ i {a b} → a ~[ suc i ] b → a ~[ i ] b
+      restriction zero    (a , m-↠⌜a⌝ , n-↠⌜a⌝ , _  ) = a , m-↠⌜a⌝ , n-↠⌜a⌝ , tt
+      restriction (suc i) (a , m-↠⌜a⌝ , n-↠⌜a⌝ , X∋a) = a , m-↠⌜a⌝ , n-↠⌜a⌝ , rˣ i X∋a
 
-  ☒□X→̇X : ∀ X n → Trackable (☒ (□ X) by n) X
-  ☒□X→̇X X n = ƛ ↑ ⌞ n ⌟ , (λ (x , x⊩a) → x) , λ { {a} {x , ⌞n⌟⊩x} tt → {! ⌞n⌟⊩x !} }
-
-  ☒X→̇☒☒X : ∀ X a → Trackable (☒ X by a) (☒ (☒ X by a) by ⟨⟩)
-  ☒X→̇☒☒X X _ = ƛ # 0 , (_, tt) , λ _ → tt
-
-  ☒-intro : ∀ X → X .Carrier → ∃[ a ] ((☒ X by a) .Carrier)
-  ☒-intro X x with a , a⊩x ←  X .realiserOf x = a , x , a⊩x
-
-  ☒-internalize
-    : ∀ X Y
-    → (f : ∅ ⊢ X .type → ∅ ⊢ Y .type)
-    → (∀ a → ∃[ x ] (X ._⊩_ a x) → ∃[ y ] (Y ._⊩_ (f a) y))
-    → (∀ a → Trackable (☒ X by a) (☒ Y by f a))
-  ☒-internalize X Y f g a = (ƛ # 0) , g a , λ x → tt
-
-  ☒GL : ∀ X a → Trackable (☒ ((□ X) ⇒ X) by a) (☒ X by gfix a)
-  ☒GL X = ☒-internalize ((□ X) ⇒ X) X gfix λ r (f , r⊩f) → {! !} , {! !}
-
-  -- non-provable in GLA
-  IER : ∀ X a → Trackable (□ (☒ X by a)) X
-  IER X a = ƛ (↑ a) , (λ (x , x⊩a) → x) , λ {_} {(x , a⊩x)} _ → {! !} 
--}
+  GL : ∀ X → ∃[ r ] ((□ (□ X ⇒ X) ⇒ □ X) ∋ r)
+  GL X = igfix (PER.type X) , gs
+    where
+      gs : ∀ i → (□ (□ X ⇒ X) ⇒ □ X) ∋[ i ] igfix (PER.type X)
+      gs i {j = zero}  j≤i (r , m-↠⌜r⌝ , n-↠⌜r⌝ , ⊤ )     = gfix r , -↠-trans (·₂-↠ m-↠⌜r⌝) igfix-⌜⌝ , -↠-trans (·₂-↠ n-↠⌜r⌝) igfix-⌜⌝ , tt
+      gs i {j = suc j} j≤i (r , m-↠⌜r⌝ , n-↠⌜r⌝ , □X⇒X∋r) = gfix r , -↠-trans (·₂-↠ m-↠⌜r⌝) igfix-⌜⌝ , -↠-trans (·₂-↠ n-↠⌜r⌝) igfix-⌜⌝ , {! □X⇒X∋r ≤-refl (□X∋⌜gfix r⌝) !}
