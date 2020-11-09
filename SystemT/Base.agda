@@ -16,7 +16,6 @@ infix  3 _⊢_
 
 infixr 5 ƛ_
 infix  6 ⟨_,_⟩
-infixr 6 proj₁_ proj₂_
 infixl 7 _·_
 infixl 8 _[_] _⟪_⟫
 infix  9 `_ #_
@@ -52,10 +51,10 @@ data _⊢_ Γ where
     : Γ ⊢ A 
     → Γ ⊢ B
     → Γ ⊢ A ×̇ B
-  proj₁_
+  proj₁
     : Γ ⊢ A ×̇ B
     → Γ ⊢ A
-  proj₂_
+  proj₂
     : Γ ⊢ A ×̇ B
     → Γ ⊢ B
   zero
@@ -83,8 +82,8 @@ rename ρ (ƛ M)       = ƛ rename (ext ρ) M
 rename ρ (M · N)     = rename ρ M · rename ρ N
 rename ρ ⟨⟩          = ⟨⟩
 rename ρ ⟨ M , N ⟩   = ⟨ rename ρ M , rename ρ N ⟩
-rename ρ (proj₁ M)   = proj₁ rename ρ M
-rename ρ (proj₂ N)   = proj₂ rename ρ N
+rename ρ (proj₁ M)   = proj₁ (rename ρ M)
+rename ρ (proj₂ N)   = proj₂ (rename ρ N)
 rename ρ zero        = zero
 rename ρ (suc M)     = suc (rename ρ M)
 rename ρ (rec M N L) = rec (rename ρ M) (rename (ext (ext ρ)) N) (rename ρ L)
@@ -113,8 +112,8 @@ _⟪_⟫
 (M · N)   ⟪ σ ⟫ = M ⟪ σ ⟫ · N ⟪ σ ⟫
 ⟨⟩        ⟪ σ ⟫ = ⟨⟩
 ⟨ M , N ⟩ ⟪ σ ⟫ = ⟨ M ⟪ σ ⟫ , N ⟪ σ ⟫ ⟩
-(proj₁ M) ⟪ σ ⟫ = proj₁ M ⟪ σ ⟫
-(proj₂ M) ⟪ σ ⟫ = proj₂ M ⟪ σ ⟫
+(proj₁ M) ⟪ σ ⟫ = proj₁ (M ⟪ σ ⟫)
+(proj₂ M) ⟪ σ ⟫ = proj₂ (M ⟪ σ ⟫)
 zero      ⟪ σ ⟫ = zero
 suc M     ⟪ σ ⟫ = suc (M ⟪ σ ⟫)
 rec M N L ⟪ σ ⟫ = rec (M ⟪ σ ⟫) (N ⟪ exts (exts σ) ⟫) (L ⟪ σ ⟫)
@@ -251,7 +250,21 @@ module -↠-Reasoning where
     → Γ ⊢ L -↠ N
   _ ≡⟨ P.refl ⟩ M-↠N = M-↠N
 
-open -↠-Reasoning using (_⊢_-↠_) public
+  -↠-refl : ∀ {M : Γ ⊢ A} → Γ ⊢ M -↠ M
+  -↠-refl = _ ∎
+ 
+  -↠-reflexive : ∀ {M N : Γ ⊢ A} → M ≡ N → Γ ⊢ M -↠ N
+  -↠-reflexive P.refl = _ ∎
+
+  -↠-trans
+    : ∀ {L}
+    → Γ ⊢ L -→ M
+    → Γ ⊢ M -↠ N
+      ----------
+    → Γ ⊢ L -↠ N
+  -↠-trans L-↠M M-↠N = _ -→⟨ L-↠M ⟩ M-↠N
+
+open -↠-Reasoning using (_⊢_-↠_; -↠-refl; -↠-reflexive; -↠-trans) public
 
 data Value : (M : ∅ ⊢ A) → Set where
   ƛ_
