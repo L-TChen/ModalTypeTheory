@@ -1,20 +1,28 @@
-{-# OPTIONS --without-K --cubical #-}
+{-# OPTIONS --cubical #-}
 
--- Simply Typed λ-Calculus with products
+-- Guarded infinitary simply typed λ-Calculus with products
 
-module InfSTLC.Base where
+module gCoSTLC where
 
 open import Data.Nat
   hiding (_≟_)
 
 open import Later
-pure  = next
+
+pure  = next_
 _<*>_ = _⊛_
+
+import STLC as S
+open S._⊢_
 
 open import Context        public
   hiding ([_])
 
-infix  3 _⊢_
+infix  3 _⊢_ _⊢_-→_ _⊢_-↠_ _⊢_-↠ᵍ_
+
+infix  0 begin_
+infixr 2 _-→⟨_⟩_ _-↠⟨_⟩_
+infix  3 _∎
 
 infixr 5 ƛ_
 infix  6 ⟨_,_⟩
@@ -35,6 +43,8 @@ private
 -- Typing Rules
 
 data _⊢_ Γ where
+  undefined : Γ ⊢ A
+  
   `_
     : Γ ∋ A
       ---------
@@ -43,21 +53,17 @@ data _⊢_ Γ where
     : ▹ (Γ , A ⊢ B)
       ----------------
     → Γ     ⊢ A →̇ B
-
   _·_
     : ▹ (Γ ⊢ A →̇ B)
     → ▹ (Γ ⊢ A)
       ----------
     → Γ ⊢ B
-
   ⟨⟩
     : Γ ⊢ ⊤̇ 
-
   ⟨_,_⟩
     : ▹ (Γ ⊢ A)
     → ▹ (Γ ⊢ B)
     → Γ ⊢ A ×̇ B
-
   proj₁_
     : ▹ (Γ ⊢ A ×̇ B)
     → Γ ⊢ A
@@ -69,24 +75,39 @@ data _⊢_ Γ where
 # n  =  ` count n
 
 ------------------------------------------------------------------------------
+-- Injection from STLC to guarded STLC
+
+fromSTLC
+  : Γ S.⊢ A
+  → Γ   ⊢ A
+fromSTLC (` x)     = ` x
+fromSTLC (ƛ M)     = ƛ next (fromSTLC M)
+fromSTLC (M · N)   = next fromSTLC M · next fromSTLC N
+fromSTLC ⟨⟩        = ⟨⟩
+fromSTLC ⟨ M , N ⟩ = ⟨ next fromSTLC M , next fromSTLC N ⟩
+fromSTLC (proj₁ L) = proj₁ next fromSTLC L
+fromSTLC (proj₂ L) = proj₂ next fromSTLC L
+
+------------------------------------------------------------------------------
 -- Variable renaming
 
-rename : (A : Type) {Γ Γ′ : Cxt} → Rename Γ Γ′
+rename : Rename Γ Γ′
   → Γ  ⊢ A
   → Γ′ ⊢ A
-rename = fix λ rename▹ A ρ → λ where
+rename = fix {A = ∀ {A Γ Γ′} → Rename Γ Γ′ → Γ ⊢ A → Γ′ ⊢ A} λ rename▹ ρ → λ where
+  undefined → undefined
   (` x)     → ` ρ x
-  (ƛ M)     → ƛ λ κ → rename▹ κ _ (ext ρ) (M κ)
-  (M · N)   → (λ κ → rename▹ κ _ ρ (M κ)) · λ x → rename▹ x _ ρ (N x)
+  (ƛ M)     → ƛ λ α → rename▹ α (ext ρ) (M α)
+  (M · N)   → (λ α → rename▹ α ρ (M α)) · λ α → rename▹ α ρ (N α)
   ⟨⟩        → ⟨⟩
-  ⟨ M , N ⟩ → ⟨ (λ κ → rename▹ κ _ ρ (M κ)) , (λ κ → rename▹ κ _ ρ (N κ)) ⟩
-  (proj₁ L) → proj₁ λ x → rename▹ x _ ρ (L x)
-  (proj₂ L) → proj₂ λ x → rename▹ x _ ρ (L x)
+  ⟨ M , N ⟩ → ⟨ (λ α → rename▹ α ρ (M α)) , (λ α → rename▹ α ρ (N α)) ⟩
+  (proj₁ L) → proj₁ λ α → rename▹ α ρ (L α)
+  (proj₂ L) → proj₂ λ α → rename▹ α ρ (L α) 
 
 wk
   : Γ ⊢ A
   → Γ , B ⊢ A
-wk = rename _ S_
+wk = rename S_
 
 ------------------------------------------------------------------------------
 -- Substitution
@@ -99,27 +120,21 @@ exts
   : Subst Γ Γ′
   → Subst (Γ , B) (Γ′ , B)
 exts σ Z     = ` Z
-exts σ (S p) = rename _ S_ (σ p)
-
-subst
-  : (A : Type) {Γ Γ′ : Cxt}
-  → Subst Γ Γ′
-  → Γ  ⊢ A
-  → Γ′ ⊢ A
-subst = fix λ subst▹ A σ → λ where
-  (` x)     → σ x
-  (ƛ M)     → ƛ λ k → subst▹ k _ (exts σ) (M k)
-  (M · N)   → (λ k → subst▹ k _ σ (M k)) · (λ k → subst▹ k _ σ (N k))
-  ⟨⟩        → ⟨⟩
-  ⟨ M , N ⟩ → ⟨ (λ k → subst▹ k _ σ (M k)) , (λ k → subst▹ k _ σ (N k)) ⟩
-  (proj₁ L) → proj₁ λ k → subst▹ k _ σ (L k)
-  (proj₂ L) → proj₂ λ k → subst▹ k _ σ (L k) 
+exts σ (S p) = rename S_ (σ p)
 
 _⟪_⟫
   : Γ  ⊢ A
   → Subst Γ Γ′
   → Γ′ ⊢ A
-M ⟪ σ ⟫ = subst _ σ M
+_⟪_⟫ = fix {A = ∀ {A Γ Γ′} → Γ ⊢ A → Subst Γ Γ′ → Γ′ ⊢ A} λ subst▹ → λ where
+  undefined _ → undefined
+  (` x)     σ → σ x
+  (ƛ M)     σ → ƛ λ α → subst▹ α (M α) (exts σ)
+  (M · N)   σ → (λ α → subst▹ α (M α) σ) · λ α → subst▹ α (N α) σ
+  ⟨⟩        σ → ⟨⟩
+  ⟨ M , N ⟩ σ → ⟨ (λ α → subst▹ α (M α) σ) , (λ α → subst▹ α (N α) σ) ⟩
+  (proj₁ L) σ → proj₁ λ α → subst▹ α (L α) σ 
+  (proj₂ L) σ → proj₂ λ α → subst▹ α (L α) σ
 
 subst-zero
   : Γ ⊢ B
@@ -131,7 +146,8 @@ _[_]
   : Γ , B ⊢ A
   → Γ ⊢ B
   → Γ ⊢ A
-M [ N ] = subst _ (subst-zero N) M
+M [ N ] = M ⟪ subst-zero N ⟫
+
 ------------------------------------------------------------------------------
 -- Examples 
 
@@ -146,7 +162,6 @@ L=⟨L₁,L₂⟩ = fix λ L▹ →
 ------------------------------------------------------------------------------
 -- Single-step reduction
 
-infix 3 _⊢_-→_
 data _⊢_-→_ (Γ : Cxt) : (M N : Γ ⊢ A) → Set where
   β-ƛ·
     : Γ ⊢ next (ƛ next M) · (next N) -→ M [ N ]
@@ -198,10 +213,6 @@ data _⊢_-→_ (Γ : Cxt) : (M N : Γ ⊢ A) → Set where
 ------------------------------------------------------------------------------
 -- Multi-step beta-reduction
 
-infix  0 begin_
-infix  2 _⊢_-↠_
-infixr 2 _-→⟨_⟩_ _-↠⟨_⟩_
-infix  3 _∎
 
 data _⊢_-↠_ (Γ : Cxt) : Γ ⊢ A → Γ ⊢ A → Set where
   _∎ : (M : Γ ⊢ A) → Γ ⊢ M -↠ M
@@ -284,6 +295,7 @@ proj₂-↠ (L -→⟨ L→L₂ ⟩ L₂-↠L₂) =
 ⟨,⟩₁-↠ (M -→⟨ M→M₁ ⟩ M₁-↠M₂) =
   ⟨ next M , _ ⟩ -→⟨ ξ-⟨,⟩₁ M→M₁ ⟩ ⟨,⟩₁-↠ M₁-↠M₂
 
+
 ⟨,⟩₂-↠
   : {M : ▹ (Γ ⊢ A)}
   → _ ⊢ N -↠ N′
@@ -305,42 +317,109 @@ proj₂-↠ (L -→⟨ L→L₂ ⟩ L₂-↠L₂) =
     ∎
 
 ------------------------------------------------------------------------------
--- Progress for ∞STLC
+-- Infinitary beta-reduction
 
-data Value : (M : ∅ ⊢ A) → Set where
-  ƛ_
-    : (N : ▹ (∅ , A ⊢ B))
-      -------------------
-    → Value (ƛ N)
+data _⊢_-↠ᵍ_ (Γ : Cxt) : Γ ⊢ A → Γ ⊢ A → Set where
+  -↠to-↠
+    : Γ ⊢ M -↠  N
+    → Γ ⊢ M -↠ᵍ N
 
-  ⟨⟩
-    : Value ⟨⟩
-
-  ⟨_,_⟩
-    : (M : ▹ (∅ ⊢ A))
-    → (N : ▹ (∅ ⊢ B))
-    → Value ⟨ M , N ⟩
-
-------------------------------------------------------------------------------
--- Progress theorem i.e. one-step evaluator
-
-data Progress (M : ∅ ⊢ A) : Set where
-  step
-    : ∅ ⊢ M -→ N
-      --------------
-    → Progress M
-
-  done
-    : Value M
-    → Progress M
+  _-↠⟨_⟩_⟨_⟩·_⟨_⟩
+    : {M M′ : ▹ (Γ ⊢ A →̇ B)} {N N′ : ▹ (Γ ⊢ A)}
+    → (L : Γ ⊢ B)
+    → Γ ⊢ L -↠ M · N
+    → ▸ (λ α → Γ ⊢ M α -↠ᵍ M′ α)
+    → ▸ (λ α → Γ ⊢ N α -↠ᵍ N′ α)
+    → Γ ⊢ L -↠ᵍ M′ · N′
 
 {-
-progress : (A : Type) → (M : ∅ ⊢ A) → Progress M
-progress = fix λ progress▹ A → λ where
-  (ƛ M)      → {!!}
-  (M · N)    → {!!}
-  ⟨⟩         → {!!}
-  ⟨ M , N ⟩  → {!!}
-  (proj₁ L)  → {!!}
-  (proj₂ L)  → {!!}
+data isRootStable : (M : Γ ⊢ A) → Set where
+  `_ : {x : Γ ∋ A}
+    → isRootStable (` x)
+
+  ƛ_ : {M : ▹ (Γ , A ⊢ B)}
+    → isRootStable (ƛ M)
+
+  _·_ : {M : ▹ (Γ ⊢ A →̇ B)} {N : ▹ (Γ ⊢ A)}
+    → isRootStable (M · N)
 -}
+
+open import Cubical.Foundations.Everything
+  renaming (Type to 𝓤)
+open import Cubical.Data.Sigma                   as C
+  renaming (Type to 𝓤)
+  hiding   (_×_)
+open import Cubical.HITs.PropositionalTruncation
+
+Prog : Type → 𝓤
+Prog τ = ∅ ⊢ τ
+
+isSurjective : {X : 𝓤} → (Prog A → X → 𝓤) → 𝓤
+isSurjective _⊩_ = ∀ x → ∃[ a ∈ Prog _ ] a ⊩ x
+
+record Asm : 𝓤₁ where
+  field
+    carrier    : 𝓤
+    {type}     : Type
+    _⊩_        : Prog type → carrier → 𝓤
+    realiserOf : isSurjective _⊩_
+
+  RealisabilityIsProp : isProp (isSurjective _⊩_)
+  RealisabilityIsProp = isPropΠ (λ _ → propTruncIsProp)
+open Asm using (type; carrier)
+
+track : (X Y : Asm) → Prog (X .type →̇ Y .type)
+  → (X .carrier → Y .carrier) → 𝓤
+track X Y L h =
+  ∀ M x → M ⊩x x → Σ[ N ∈ _ ] (∅ ⊢ (next L) · (next M) -↠ N) C.× N ⊩y h x
+  where
+    open Asm X renaming (_⊩_ to _⊩x_)
+    open Asm Y renaming (_⊩_ to _⊩y_)
+
+IsTrackable : (A B : Asm) → (A .carrier → B .carrier) → 𝓤
+IsTrackable X Y h = Σ[ L ∈ _ ] track X Y L h
+
+Trackable : (A B : Asm) → 𝓤
+Trackable X Y = Σ[ f ∈ _ ] IsTrackable X Y f
+
+infixr 6 _⇒_
+_⇒_ : Asm → Asm → Asm
+X ⇒ Y = record
+  { _⊩_        = _⊩_
+  ; realiserOf = h }
+  where
+    open Asm X renaming (carrier to |X|; _⊩_ to _⊩x_; realiserOf to f)
+    open Asm Y renaming (carrier to |Y|; _⊩_ to _⊩y_; realiserOf to g)
+
+    _⊩_ : Prog _ → Trackable X Y → 𝓤 
+    L ⊩ (f , _)    = track X Y L f
+
+    h : isSurjective _⊩_
+    h (f , (L , L⊩f)) = ∣ L , L⊩f ∣
+
+□ₐ_ : Asm → Asm
+□ₐ X = record
+  { _⊩_        = _⊩□_
+  ; realiserOf = g }
+  where
+    open Asm X renaming (carrier to |X|; type to τ; realiserOf to f)
+
+    _⊩□_
+      : ∅ ⊢ τ
+      → Σ[ M ∈ Prog τ ] Σ[ x ∈ ▹ |X| ] (▸ λ α → M ⊩ x α)
+      → 𝓤
+    M ⊩□ (N , _) = M ≡ N
+
+    g : isSurjective _⊩□_
+    g (M , (x , ▸M⊩x)) = ∣ M , refl ∣
+
+Löb : (X : Asm) → Trackable (□ₐ (□ₐ X ⇒ X)) (□ₐ X)
+Löb X = {!!} , {!!}
+  where
+    open Asm X renaming (carrier to |X|; type to τ; realiserOf to f)
+    |□X| : 𝓤
+    |□X| = Σ[ M ∈ Prog τ ] Σ[ x ∈ ▹ |X| ] (▸ λ α → M ⊩ x α)
+ 
+    lob : (Σ[ L ∈ Prog {!!} ] Σ[ f ∈ ▹ Trackable (□ₐ X) X ] track {!!} {!!} {!!} {!fst f!}) → |□X|
+    lob = {!!}
+    

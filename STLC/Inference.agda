@@ -144,7 +144,7 @@ uniq-⇒ (⊢proj₂ ⊢M)  (⊢proj₂ ⊢N)   = ×ᵣ≡ (uniq-⇒ ⊢M ⊢N)
   → Γ ⊢ L ⇒ A →̇ B
   → ¬ (Γ ⊢ M ⇐ A)
     -------------------------
-  → ¬ ∃[ B′ ](Γ ⊢ L · M ⇒ B′)
+  → ¬ (∃[ B′ ](Γ ⊢ L · M ⇒ B′))
 ¬arg ⊢L ¬⊢M ( B′ , ⊢L′ · ⊢M′ ) rewrite dom≡ (uniq-⇒ ⊢L ⊢L′) = ¬⊢M ⊢M′
 
 ¬switch : ∀ {M}

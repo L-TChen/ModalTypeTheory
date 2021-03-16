@@ -44,9 +44,9 @@ data _∋_⦂_ : Context (Id × Type) → Id → Type → Set where
 
 ext∋
   : x ≢ y
-  → ¬ ∃[ A ]( Γ        ∋ x ⦂ A )
+  → ¬ (∃[ A ]( Γ        ∋ x ⦂ A ))
     -----------------------------
-  → ¬ ∃[ A ](Γ , y ⦂ B ∋ x ⦂ A )
+  → ¬ (∃[ A ](Γ , y ⦂ B ∋ x ⦂ A ))
 ext∋ x≢ _  (A P., Z)        = x≢ refl
 ext∋ x≢ ¬∃ (A P., S x≢y ∋x) = ¬∃ (A , ∋x)
 

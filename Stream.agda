@@ -24,15 +24,14 @@ head (x ∷ _) = x
 
 data _≈_ {A : Set} : (xs ys : Streamᵍ A) → Set where
   _∷_ : {x y : A} {xs ys : ▹ Streamᵍ A}
-    → x ≡ y
-    → (▸ λ α → xs α ≈ ys α)
+    → x ≡ y → (▸ λ α → xs α ≈ ys α)
     → x ∷ xs ≈ y ∷ ys
 
-bisimilar⇒pathEqual : (xs ys : Streamᵍ A) → xs ≈ ys → xs ≡ ys
-bisimilar⇒pathEqual (x ∷ xs) (y ∷ ys) = λ where
+bisimilar⇒pathEqual : {xs ys : Streamᵍ A} → xs ≈ ys → xs ≡ ys
+bisimilar⇒pathEqual {xs = x ∷ xs} {ys = y ∷ ys} = λ where
   (x≡y ∷ xs≈ys) → 
     x ∷ xs
-      ≡⟨ (λ i → x≡y i ∷ λ α → bisimilar⇒pathEqual _ _ (xs≈ys α) i) ⟩
+      ≡⟨ (λ i → x≡y i ∷ λ α → bisimilar⇒pathEqual (xs≈ys α) i) ⟩
     y ∷ ys ∎
 
 map : (f : A → B) → Streamᵍ A → Streamᵍ B
@@ -42,7 +41,7 @@ repeat : A → Streamᵍ A
 repeat x = fix λ xs▹ → x ∷ xs▹
 
 repeat-a-repeat : (a : A) → repeat a ≡ a ∷ next (repeat a)
-repeat-a-repeat a i = a ∷ dfix-β (λ xs▹ → a ∷ xs▹) i
+repeat-a-repeat a i = a ∷ dfix-path (λ xs▹ → a ∷ xs▹) i
 
 zipWith : (f : A → B → C) → Streamᵍ A → Streamᵍ B → Streamᵍ C
 zipWith f = fix λ zipWith▹ xs ys →
