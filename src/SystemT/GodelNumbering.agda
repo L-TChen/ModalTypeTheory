@@ -126,7 +126,7 @@ record GodelNumbering : Set where
 
   rice
     : (d : ∅ ⊢ ℕ̇ →̇ ℕ̇) (a b : ∅ ⊢ A)
-    → ((x y : ∅ ⊢ A) → ∅ ⊢ x -↠ y → ∅ ⊢ d · ⌜ x ⌝ -↠ d · ⌜ y ⌝)
+    → ((x y : ∅ ⊢ A) → ∅ ⊢ x ≡β y → ∅ ⊢ d · ⌜ x ⌝ ≡β d · ⌜ y ⌝)
     → ∅ ⊢ d · ⌜ a ⌝ -↠ zero
     → ∅ ⊢ d · ⌜ b ⌝ -↠ (suc zero)
     → ⊥

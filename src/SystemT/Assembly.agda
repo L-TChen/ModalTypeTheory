@@ -71,19 +71,17 @@ record Assembly : Set₁ where
     restriction     : (i : ℕ) → Carrier (suc i) → Carrier i
     _⊩_             : {i : ℕ} → ∅ ⊢ type → Carrier i → Prop
     ⊩-comm          : (i : ℕ) → ∀ {a x} → a ⊩ x → a ⊩ restriction i x
+    ⊩-respects-≡β   : {i : ℕ} → ∀ {a b} {x : Carrier i} → ∅ ⊢ a ≡β b → a ⊩ x → b ⊩ x
     realizerOf      : {i : ℕ} → (x : Carrier i) → ∅ ⊢ type
     realizerOf-⊩    : {i : ℕ} → (x : Carrier i) → realizerOf x ⊩ x
     realizerOf-comm : {i : ℕ} → (x : Carrier (suc i)) → realizerOf (restriction i x) ≡ realizerOf x
 
 open Assembly
 
-{-
-_◃_ : (X : Assembly) → (∅ ⊢ X .type) → Set
-X ◃ a = Σ[ x ∈ ((i : ℕ) → |X| i) ] ((∀ i → a ⊩ˣ (x i)) × (∀ i → x i ≡ rˣ i (x (suc i))))
+_RealizedBy_ : (X : Assembly) → (∅ ⊢ X .type) → Set
+X RealizedBy a = Σ[ x ∈ (∀ i → |X| i) ] Σ′[ x-comm ∈ (∀ i → x i ≡ rˣ i (x (suc i))) ] ∀ i → a ⊩ˣ x i
   where
     open Assembly X renaming (Carrier to |X|; _⊩_ to _⊩ˣ_; restriction to rˣ)
--}
-
 
 ------------------------------------------------------------------------
 -- Assembly morphisms
@@ -92,9 +90,8 @@ module _ (X Y : Assembly) where
   open Assembly X renaming (Carrier to |X|; type to A; _⊩_ to _⊩ˣ_; restriction to rˣ; ⊩-comm to ⊩ˣ-comm)
   open Assembly Y renaming (Carrier to |Y|; type to B; _⊩_ to _⊩ʸ_; restriction to rʸ; ⊩-comm to ⊩ʸ-comm)
 
-  -- TODO use b =β r · a here
   Tracks : (j : ℕ) (r : ∅ ⊢ A →̇ B) (f : |X| j → |Y| j) → Prop
-  Tracks j r h = {a : ∅ ⊢ A} {x : |X| j} → a ⊩ˣ x → ∀ {b} → ∅ ⊢ b -↠ (r · a) → b ⊩ʸ (h x)
+  Tracks j r f = {a : ∅ ⊢ A} {x : |X| j} → a ⊩ˣ x → (r · a) ⊩ʸ f x
 
   -- Arrows
   {-
@@ -147,6 +144,7 @@ module _ (X Y : Assembly) where
   ; restriction     = λ i → id
   ; _⊩_             = λ a x → Squash ⊥
   ; ⊩-comm          = λ i → id′
+  ; ⊩-respects-≡β   = λ { _ (squash ()) }
   ; realizerOf      = λ ()
   ; realizerOf-⊩    = λ ()
   ; realizerOf-comm = λ ()
@@ -162,6 +160,7 @@ X ⇒ Y = record
   ; _⊩_             = λ {i} r (_ , fs , fs-comm , _) → Tracks≤ X Y i r fs
   ; restriction     = λ i (r , fs , fs-comm , r⊩fs) → r , (λ j≤i → fs (m≤n⇒m≤n+1 j≤i)) , (λ j≤i → fs-comm (m≤n⇒m≤n+1 j≤i)) , (λ j≤i → r⊩fs (m≤n⇒m≤n+1 j≤i))
   ; ⊩-comm          = λ i r⊩fs j≤i → r⊩fs (m≤n⇒m≤n+1 j≤i)
+  ; ⊩-respects-≡β   = λ r≡βs r⊩fs j≤i a⊩x → Y .⊩-respects-≡β (·₁≡β r≡βs) (r⊩fs j≤i a⊩x)
   ; realizerOf      = λ (r , fs , fs-comm , r⊩fs) → r
   ; realizerOf-⊩    = λ (r , fs , fs-comm , r⊩fs) → r⊩fs
   ; realizerOf-comm = λ _ → P.refl
@@ -177,11 +176,12 @@ module _ {godelNumbering : GodelNumbering} where
   □ X = record
     { Carrier         = λ i → ∃[ a ] ∃′[ x ] (_⊩ˣ⁻_ {i} a x)
     ; type            = ℕ̇
-    ; _⊩_             = λ {i} n (a , _) → Squash (∅ ⊢ n -↠ ⌜ a ⌝)
+    ; _⊩_             = λ {i} n (a , _) → Squash (∅ ⊢ n ≡β ⌜ a ⌝)
     ; restriction     = λ i (a , x , a⊩ˣ⁻x) → a , rˣ⁻ i x , ⊩ˣ⁻-comm i a⊩ˣ⁻x
     ; ⊩-comm          = λ { zero → id′; (suc i) → id′ }
+    ; ⊩-respects-≡β   = λ { m≡βn (squash m≡β⌜a⌝) → squash (≡β-trans (≡β-sym m≡βn) m≡β⌜a⌝) }
     ; realizerOf      = λ (a , _) → ⌜ a ⌝
-    ; realizerOf-⊩    = λ _ → squash -↠-refl
+    ; realizerOf-⊩    = λ _ → squash ≡β-refl
     ; realizerOf-comm = λ _ → P.refl
     }
     where
@@ -208,7 +208,7 @@ module _ {godelNumbering : GodelNumbering} where
     proj₁-gs : ∀ i p → Product.proj₁ (gs i p) ≡ gfix (Product.proj₁ p)
 
     gs zero      (r , _                      , _   ) = gfix r , tt                  , squash tt
-    gs (suc i) p@(r , (_ , fs , fs-comm , _) , r⊩fs) = gfix r , fs ≤-refl (gs i p′) , r⊩fs ≤-refl (squash (-↠-reflexive (P.cong ⌜_⌝ (P.sym (proj₁-gs i p′))))) gfix-spec
+    gs (suc i) p@(r , (_ , fs , fs-comm , _) , r⊩fs) = gfix r , fs ≤-refl (gs i p′) , X .⊩-respects-≡β (≡β-sym (-↠-to-≡β gfix-spec)) (r⊩fs ≤-refl (squash (≡β-reflexive (P.cong ⌜_⌝ (P.sym (proj₁-gs i p′))))))
       where p′ = (□ ((□ X) ⇒ X)) .restriction i p
 
     proj₁-gs zero    p = P.refl
@@ -220,40 +220,48 @@ module _ {godelNumbering : GodelNumbering} where
       where p′ = (□ ((□ X) ⇒ X)) .restriction (suc i) p
 
     gs-tracks : Tracks∞ (□ ((□ X) ⇒ X)) (□ X) (igfix (X .type)) gs
-    gs-tracks i (squash n-↠⌜r⌝) b-↠igfix = squash
+    gs-tracks i (squash n≡β⌜r⌝) = squash
       (begin
-        _
-      -↠⟨ b-↠igfix ⟩
         igfix (X .type) · _
-      -↠⟨ ·₂-↠ n-↠⌜r⌝ ⟩
+      ≡β⟨ ·₂≡β n≡β⌜r⌝ ⟩
         igfix (X .type) · ⌜ _ ⌝
       -↠⟨ igfix-⌜⌝ ⟩
         ⌜ gfix _ ⌝
       ≡⟨ P.cong ⌜_⌝ (P.sym (proj₁-gs i _)) ⟩
         ⌜ Product.proj₁ (gs i _) ⌝
       ∎)
-      where open -↠-Reasoning
+      where open ≡β-Reasoning
 
   ☒_by_ : (X : Assembly) → (a : ∅ ⊢ X .type) → Assembly
   ☒ X by a = record
     { Carrier         = λ i → Σ′[ x ∈ |X| i ] (a ⊩ˣ x)
     ; type            = ⊤̇
-    ; _⊩_             = λ _ _ → Squash ⊤
+    ; _⊩_             = λ a _ → Squash (∅ ⊢ a ≡β ⟨⟩)
     ; restriction     = λ i (x , a⊩x) → rˣ i x , ⊩ˣ-comm i a⊩x
-    ; ⊩-comm          = λ i _ → squash tt
+    ; ⊩-comm          = λ i → id′
+    ; ⊩-respects-≡β   = λ { a≡βb (squash a≡β⟨⟩) → squash (≡β-trans (≡β-sym a≡βb) a≡β⟨⟩) }
     ; realizerOf      = λ _ → ⟨⟩
-    ; realizerOf-⊩    = λ _ → squash tt
+    ; realizerOf-⊩    = λ _ → squash ≡β-refl
     ; realizerOf-comm = λ x → P.refl
     }
     where
       open Assembly X renaming (Carrier to |X|; type to A; _⊩_ to _⊩ˣ_; restriction to rˣ; ⊩-comm to ⊩ˣ-comm)
 
   ☒X→̇X : ∀ X a → Trackable∞ (☒ X by a) X
-  ☒X→̇X X a = ƛ (↑ a) , (λ i (x , a⊩x) → x) , (λ i x → P.refl) , λ i _ b-↠[ƛa]·⟨⟩ → {! !}
-  --ƛ (↑ a) , (λ (x , a⊩x) → x) , λ _ → {! a⊩x !}
+  ☒X→̇X X a = ƛ (↑ a) , (λ i (x , a⊩x) → x) , (λ i x → P.refl) , λ i {_} {(x , a⊩x)} _ →
+    X .⊩-respects-≡β (≡β-sym (
+      begin 
+        (ƛ ↑ a) · _
+      -→⟨ β-ƛ· ⟩
+        ↑ a [ _ ]
+      ≡⟨ subst-↑ _ a ⟩
+        a
+      ∎)) a⊩x
+    where open ≡β-Reasoning
+
 {-
-  ☒X→̇□X : ∀ X a → Trackable (☒ X by a) (□ X)
-  ☒X→̇□X X a = ƛ ↑ ⌜ a ⌝ , (λ (x , a⊩x) → a , x , a⊩x) , λ _ → {! eval-gnum a⊩x !}
+  ☒X→̇□X : ∀ X a → Trackable∞ (☒ X by a) (□ X)
+  ☒X→̇□X X a = ƛ ↑ ⌜ a ⌝ , (λ i (x , a⊩x) → a , {! x !} , {! a⊩x !}) , (λ i x → {!!}) , {! λ _ → {! eval-gnum a⊩x !}!}
 {-
   ¬☒X→̇□¬☒X : ∀ X a → Trackable ((☒ X by a) ⇒ ⊥̇) (□ ((☒ X by a) ⇒ ⊥̇))
   ¬☒X→̇□¬☒X X a = ƛ zero , id , λ r {_} {(x , a⊩x)} _ → r {⟨⟩} {x , a⊩x} tt

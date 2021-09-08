@@ -385,17 +385,23 @@ progress (mlet N `in M) with progress N
   → Δ ︔ Γ , □ A ⊢ B 
 ΔtoΓ M = mlet # 0 `in wk₁ M
 
-{-# TERMINATING #-}
-ΓtoΔ : Δ ︔ Γ , □ A ⊢ B
-  → Δ , A ︔ Γ ⊢ B
-ΓtoΔ (` Z)      = ⌜ # 0 ⌝
-ΓtoΔ (` (S x))  = ` x
-ΓtoΔ (ƛ M)      = ƛ ΓtoΔ (exch M)
-ΓtoΔ (M · N)    = ΓtoΔ M · ΓtoΔ N
-ΓtoΔ ⟨⟩         = ⟨⟩
-ΓtoΔ ⟨ M , M₁ ⟩ = ⟨ ΓtoΔ M , ΓtoΔ M₁ ⟩
-ΓtoΔ (proj₁ M)  = proj₁ ΓtoΔ M
-ΓtoΔ (proj₂ M)  = proj₂ ΓtoΔ M
-ΓtoΔ ⌜ M ⌝      = ⌜ wk₁ M ⌝
-ΓtoΔ (mlet N `in M) =
+private
+  ΓtoΔ-var : ∀ Γ′ → Γ , □ A ⧺ Γ′ ∋ B
+        → Δ , A ︔  Γ ⧺ Γ′ ⊢ B
+  ΓtoΔ-var ∅ Z            = ⌜ ` Z ⌝
+  ΓtoΔ-var ∅ (S v)        = ` v
+  ΓtoΔ-var (Γ′ , T) Z     = ` Z
+  ΓtoΔ-var (Γ′ , T) (S v) = wk₁ (ΓtoΔ-var Γ′ v)
+
+ΓtoΔ : Δ ︔  Γ , □ A ⧺ Γ′ ⊢ B
+  → Δ , A ︔ Γ ⧺ Γ′ ⊢ B
+ΓtoΔ (` v)           = ΓtoΔ-var _ v
+ΓtoΔ {Γ′ = Γ′} (ƛ M) = ƛ ΓtoΔ {Γ′ = Γ′ , _} M
+ΓtoΔ (M · N)         = ΓtoΔ M · ΓtoΔ N
+ΓtoΔ ⟨⟩              = ⟨⟩
+ΓtoΔ ⟨ M , M₁ ⟩      = ⟨ ΓtoΔ M , ΓtoΔ M₁ ⟩
+ΓtoΔ (proj₁ M)       = proj₁ ΓtoΔ M
+ΓtoΔ (proj₂ M)       = proj₂ ΓtoΔ M
+ΓtoΔ ⌜ M ⌝           = ⌜ wk₁ M ⌝
+ΓtoΔ (mlet N `in M)  =
   mlet ΓtoΔ N `in rename id ∋-exch (ΓtoΔ M) 
