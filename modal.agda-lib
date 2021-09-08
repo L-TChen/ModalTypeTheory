@@ -1,0 +1,5 @@
+name: modal
+include: src
+depend:
+  standard-library
+flags: --auto-inline --without-K

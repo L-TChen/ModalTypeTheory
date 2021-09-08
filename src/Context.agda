@@ -1,5 +1,3 @@
-{-# OPTIONS --without-K #-}
-
 ------------------------------------------------------------------------------
 -- A context is just a snoc list.
 
@@ -17,14 +15,16 @@ open import Relation.Nullary
 
 open import Type public
 
-infix  3 _∋_
 --infix  4 _≟Cxt_
-infixl 4  _,_ _⧺_ 
+infixl 4  _,_ _⧺_
+infix  3 _∋_ _⊑ᵖ_
 
 data Context (Ty : Set) : Set where
   ∅   : Context Ty
   _,_ : (Γ : Context Ty) → (T : Ty) → Context Ty
   
+pattern [] = ∅ , ∅
+
 private
   variable
     Ty    : Set
@@ -34,7 +34,7 @@ private
 Cxt  = Context Type
 Cxts = Context Cxt
 
-pattern [] = ∅ , ∅
+-- pattern [] = ∅ , ∅
 
 [_] : {A : Set} → A → Context A
 [ A ] = ∅ , A
@@ -89,15 +89,16 @@ Rename Γ Γ′ = ∀ {A} → Γ ∋ A → Γ′ ∋ A
 ------------------------------------------------------------------------------
 -- Prefix
 
-data Prefix {Ty : Set} : Context Ty → Context Ty → Set where
-  Z  : Prefix Γ Γ
-  S_ : Prefix Γ Δ → Prefix Γ (Δ , A)
 
-prefix-trans : Prefix Γ Δ → Prefix Δ Θ → Prefix Γ Θ
+data _⊑ᵖ_ {Ty : Set} : Context Ty → Context Ty → Set where
+  Z  : Γ ⊑ᵖ Γ
+  S_ : Γ ⊑ᵖ Δ → Γ ⊑ᵖ (Δ , A)
+
+prefix-trans : Γ ⊑ᵖ Δ → Δ ⊑ᵖ Θ → Γ ⊑ᵖ Θ
 prefix-trans m Z = m
 prefix-trans m (S n) = S prefix-trans m n
 
-------------------------------------------------------------------------------
+----------------------------------------------------------------------------
 -- Properties of ∋
 
 ∋-exch
@@ -110,7 +111,7 @@ prefix-trans m (S n) = S prefix-trans m n
 ------------------------------------------------------------------------------
 -- Properties of ⧺
 
-⧺-identityˡ : ∀ (Γ : Context Ty) → (∅ ⧺ Γ) ≡ Γ
+⧺-identityˡ : (Γ : Context Ty) → (∅ ⧺ Γ) ≡ Γ
 ⧺-identityˡ ∅       = P.refl
 ⧺-identityˡ (Γ , A) = P.cong (_, A) (⧺-identityˡ Γ)
 
@@ -143,37 +144,37 @@ prefix-trans m (S n) = S prefix-trans m n
 ... | inj₁ (S left) = S ∋-⧺⁺ˡ left
 ... | inj₂ right    = S ∋-⧺⁺ʳ Δ right
 
-∋-⧺-assocˡ : (Δ Δ' Γ : Context Ty) → Rename (Δ ⧺ (Δ' ⧺ Γ)) ((Δ ⧺ Δ') ⧺ Γ)
+∋-⧺-assocˡ : (Δ Δ' Γ : Context Ty) → Rename (Δ ⧺ (Δ' ⧺ Γ)) (Δ ⧺ Δ' ⧺ Γ)
 ∋-⧺-assocˡ Δ Δ' Γ x with ⧺-∋ (Δ' ⧺ Γ) x
 ... | inj₁ Δ∋A = ∋-⧺⁺ˡ {Δ = Γ} (∋-⧺⁺ˡ {Δ = Δ'} Δ∋A)
 ... | inj₂ Δ'⧺Γ∋A with ⧺-∋ Γ Δ'⧺Γ∋A
 ... | inj₁ Δ'∋A = ∋-⧺⁺ˡ {Δ = Γ} (∋-⧺⁺ʳ Δ Δ'∋A)
 ... | inj₂ Γ∋A = ∋-⧺⁺ʳ (Δ ⧺ Δ') Γ∋A
 
-∋-⧺-assocʳ : (Δ Δ' Γ : Context Ty) → Rename ((Δ ⧺ Δ') ⧺ Γ) (Δ ⧺ (Δ' ⧺ Γ))
+∋-⧺-assocʳ : (Δ Δ' Γ : Context Ty) → Rename (Δ ⧺ Δ' ⧺ Γ) (Δ ⧺ (Δ' ⧺ Γ))
 ∋-⧺-assocʳ Δ Δ' Γ x with ⧺-∋ Γ x
 ... | inj₂ Γ∋A = ∋-⧺⁺ʳ Δ (∋-⧺⁺ʳ Δ' Γ∋A)
 ... | inj₁ Δ⧺Δ'∋A with ⧺-∋ Δ' Δ⧺Δ'∋A
 ... | inj₁ Δ∋A = ∋-⧺⁺ˡ {Δ = Δ' ⧺ Γ} Δ∋A
 ... | inj₂ Δ'∋A = ∋-⧺⁺ʳ Δ (∋-⧺⁺ˡ {Δ = Γ} Δ'∋A)
 
-prefix-⧺ᵣ : ∀ Δ → Prefix Γ (Γ ⧺ Δ)
+prefix-⧺ᵣ : ∀ Δ → Γ ⊑ᵖ Γ ⧺ Δ
 prefix-⧺ᵣ ∅ = Z
 prefix-⧺ᵣ (Δ , A) = S prefix-⧺ᵣ Δ
 
-prefix-⧺ᵣ-rev : Prefix Γ Θ → ∃[ Δ ] ((Γ ⧺ Δ) ≡ Θ)
+prefix-⧺ᵣ-rev : Γ ⊑ᵖ Θ → ∃[ Δ ] ((Γ ⧺ Δ) ≡ Θ)
 prefix-⧺ᵣ-rev Z = _ , P.refl
 prefix-⧺ᵣ-rev (S n) with prefix-⧺ᵣ-rev n
 ... | Δ , eq = (Δ , _) , P.cong (_, _) eq
 
-prefix-⧺⁻ : ∀ Θ → Prefix Γ (Δ ⧺ Θ) → Prefix Γ Δ ⊎ ∃[ Θ′ ] ∃[ A ]((Δ ⧺ (Θ′ , A)) ≡ Γ × Prefix (Θ′ , A) Θ)
+prefix-⧺⁻ : ∀ Θ → Γ ⊑ᵖ (Δ ⧺ Θ) → Γ ⊑ᵖ Δ ⊎ ∃[ Θ′ ] ∃[ A ]((Δ ⧺ (Θ′ , A)) ≡ Γ × (Θ′ , A) ⊑ᵖ Θ)
 prefix-⧺⁻ ∅ n = inj₁ n
 prefix-⧺⁻ (Θ , B) Z = inj₂ (Θ , (B , (P.refl , Z)))
 prefix-⧺⁻ (Θ , B) (S n) with prefix-⧺⁻ Θ n
 ... | inj₁ x = inj₁ x
 ... | inj₂ (Θ′ , (A , (P.refl , n′))) = inj₂ (Θ′ , (A , (P.refl , S n′)))
 
-prefix-⧺ₗ : ∀ Γ → Prefix Δ Θ → Prefix (Γ ⧺ Δ) (Γ ⧺ Θ)
+prefix-⧺ₗ : ∀ Γ → Δ ⊑ᵖ Θ → (Γ ⧺ Δ) ⊑ᵖ (Γ ⧺ Θ)
 prefix-⧺ₗ Γ Z = Z
 prefix-⧺ₗ Γ (S n) = S prefix-⧺ₗ Γ n
 
@@ -187,7 +188,7 @@ prefix-⧺ₗ Γ (S n) = S prefix-⧺ₗ Γ n
 ------------------------------------------------------------------------------
 -- Properties of drop
 
-prefix-drop⁺ : (n : ℕ) → Prefix (drop n Γ) Γ
+prefix-drop⁺ : (n : ℕ) → (drop n Γ) ⊑ᵖ Γ
 prefix-drop⁺             zero = Z
 prefix-drop⁺ {Γ = ∅}     (suc n) = Z
 prefix-drop⁺ {Γ = Γ , _} (suc n) = S (prefix-drop⁺ n)
@@ -195,8 +196,7 @@ prefix-drop⁺ {Γ = Γ , _} (suc n) = S (prefix-drop⁺ n)
 ------------------------------------------------------------------------------
 -- Properties of replicate
 
-prefix-replicate : {n : ℕ} → Prefix Γ (replicate n A) → ∃[ n′ ] (Γ ≡ replicate n′ A)
+prefix-replicate : {n : ℕ} → Γ ⊑ᵖ (replicate n A) → ∃[ n′ ] (Γ ≡ replicate n′ A)
 prefix-replicate {n = zero} Z = zero , P.refl
 prefix-replicate {n = suc n} Z = (suc n) , P.refl
 prefix-replicate {n = suc n} (S m) = prefix-replicate m
-
